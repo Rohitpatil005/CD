@@ -1,0 +1,31 @@
+%{
+#include <stdio.h>
+%}
+%%
+[Ww][Oo][Rr][Ll][Dd]   { printf("Globe"); }
+.|\n                   { ECHO; }
+%%
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("Usage: %s <filename>\n", argv[0]);
+        return 1;
+    }
+    FILE *file = fopen(argv[1], "r");
+    if (!file) {
+        perror("Error opening file");
+        return 1;
+    }
+    yyin = file;
+    yylex();
+    fclose(file);
+    return 0;
+}
+
+int yywrap() { return 1; }
+
+/*
+lex lab_1_4.l
+gcc lex.yy.c
+./a.out test.txt
+this code changes the word world to globe in any text file, create a text file and fill it
+*/
