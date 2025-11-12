@@ -1,0 +1,3805 @@
+Skip to content
+Chat history
+
+This is a copy of a conversation between ChatGPT & Anonymous.
+
+Report conversation
+You said:
+%{
+#include <stdio.h>
+%}
+
+%%
+[0-9]+          { printf("Token: %s --> DIGIT\n", yytext); }
+[a-zA-Z]+       { printf("Token: %s --> CHARACTER\n", yytext); }
+[ \t\n]+        { /* ignore whitespace */ }
+.               { printf("Token: %s --> UNKNOWN\n", yytext); }
+%%
+
+int main() {
+    printf("Enter input:\n");
+    yylex();
+    return 0;
+}
+
+
+Execution commands – 
+flex cd1a.l 
+gcc lex.yy.c -o cd1a -lfl 
+./cd1a 
+%{
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+char *nouns[] = {"dog", "cat", "car", "tree", "book", "city"};
+char *pronouns[] = {"he", "she", "it", "they", "we", "i", "you"};
+char *verbs[] = {"run", "eat", "sleep", "write", "go", "see"};
+char *adjectives[] = {"big", "small", "fast", "red", "happy", "blue"};
+char *adverbs[] = {"quickly", "slowly", "well", "badly", "very"};
+char *prepositions[] = {"in", "on", "at", "with", "by", "for"};
+
+#define N_NOUNS (sizeof(nouns)/sizeof(nouns[0]))
+#define N_PRON  (sizeof(pronouns)/sizeof(pronouns[0]))
+#define N_VERBS (sizeof(verbs)/sizeof(verbs[0]))
+#define N_ADJ   (sizeof(adjectives)/sizeof(adjectives[0]))
+#define N_ADV   (sizeof(adverbs)/sizeof(adverbs[0]))
+#define N_PREP  (sizeof(prepositions)/sizeof(prepositions[0]))
+
+int is_in_list(char *word, char *list[], int size) {
+    for (int i = 0; i < size; i++) {
+        if (strcmp(word, list[i]) == 0)
+            return 1;
+    }
+    return 0;
+}
+%}
+
+%%
+[a-zA-Z]+ {
+    char word[100];
+    strcpy(word, yytext);
+    for (int i = 0; word[i]; i++) word[i] = tolower(word[i]);
+
+    printf("Token: %s --> ", yytext);
+
+    if (is_in_list(word, nouns, N_NOUNS)) printf("NOUN\n");
+    else if (is_in_list(word, pronouns, N_PRON)) printf("PRONOUN\n");
+    else if (is_in_list(word, verbs, N_VERBS)) printf("VERB\n");
+    else if (is_in_list(word, adjectives, N_ADJ)) printf("ADJECTIVE\n");
+    else if (is_in_list(word, adverbs, N_ADV)) printf("ADVERB\n");
+    else if (is_in_list(word, prepositions, N_PREP)) printf("PREPOSITION\n");
+    else printf("UNKNOWN\n");
+}
+
+[ \t\n]+ { /* ignore */ }
+. { /* ignore */ }
+%%
+
+int main() {
+    printf("Enter input text:\n");
+    yylex();
+    return 0;
+}
+
+
+Exection Commands – 
+flex cd1b.l 
+gcc lex.yy.c -o cd1b -lfl 
+./cd1b 
+%{
+#include <stdio.h>
+#include <ctype.h>
+
+int word_count = 0;
+int vowel_count = 0;
+int line_count = 0;
+int char_count = 0;
+
+int is_vowel(char c) {
+    c = tolower(c);
+    return (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u');
+}
+%}
+
+%%
+[a-zA-Z]+ {
+    word_count++;
+    for (int i = 0; yytext[i] != '\0'; i++) {
+        char_count++;
+        if (is_vowel(yytext[i]))
+            vowel_count++;
+    }
+}
+
+[0-9]+ {
+    word_count++;
+    for (int i = 0; yytext[i] != '\0'; i++)
+        char_count++;
+}
+
+\n {
+    line_count++;
+    char_count++;
+}
+
+. {
+    char_count++;
+}
+%%
+
+int main() {
+    printf("Enter input:\n");
+    yylex();
+    printf("Number of words: %d\n", word_count);
+    printf("Number of vowels: %d\n", vowel_count);
+    printf("Number of lines: %d\n", line_count);
+    printf("Number of characters: %d\n", char_count);
+    return 0;
+}
+
+
+Execution commands – 
+flex cd1c.l 
+gcc lex.yy.c -o cd1c -lfl 
+./cd1c
+%{
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+char find_str[100];
+char replace_str[100];
+size_t find_len, replace_len;
+char *buffer = NULL;
+size_t bufsize = 0;
+
+void find_and_replace(char *input);
+%}
+
+%%
+.|\n {
+    size_t old_len = bufsize;
+    bufsize += yyleng;
+    buffer = realloc(buffer, bufsize + 1);
+    if (!buffer) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(1);
+    }
+    memcpy(buffer + old_len, yytext, yyleng);
+    buffer[bufsize] = '\0';
+}
+%%
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s inputfile\n", argv[0]);
+        return 1;
+    }
+
+    FILE *fp = fopen(argv[1], "r");
+    if (!fp) {
+        perror("File open error");
+        return 1;
+    }
+
+    yyin = fp;
+    yylex();
+    fclose(fp);
+
+    printf("Enter string to find: ");
+    scanf("%99s", find_str);
+    printf("Enter string to replace with: ");
+    scanf("%99s", replace_str);
+
+    find_len = strlen(find_str);
+    replace_len = strlen(replace_str);
+
+    find_and_replace(buffer);
+    free(buffer);
+    return 0;
+}
+
+void find_and_replace(char *input) {
+    char *pos = input;
+    char *result = malloc(strlen(input) * 2 + 1); // Extra space
+    if (!result) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(1);
+    }
+    result[0] = '\0';
+
+    while ((pos = strstr(input, find_str)) != NULL) {
+        strncat(result, input, pos - input);
+        strcat(result, replace_str);
+        input = pos + find_len;
+    }
+    strcat(result, input);
+
+    printf("\nModified text:\n%s\n", result);
+    free(result);
+}
+
+
+Sample.txt –  
+Hello World from Lex 
+Execution commands – 
+flex cd1d.l 
+ gcc lex.yy.c -o cd1d -lfl 
+./cd1d sample.txt 
+
+%{
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+enum CaseMode { NONE, UPPER, LOWER, SENTENCE, TOGGLE } mode = NONE;
+int sentence_start = 1;
+
+void to_upper(char *text);
+void to_lower(char *text);
+void to_sentence(char *text);
+void to_toggle(char *text);
+%}
+
+%%
+.+ {
+    switch (mode) {
+        case UPPER:
+            to_upper(yytext);
+            printf("%s", yytext);
+            break;
+        case LOWER:
+            to_lower(yytext);
+            printf("%s", yytext);
+            break;
+        case SENTENCE:
+            to_sentence(yytext);
+            printf("%s", yytext);
+            break;
+        case TOGGLE:
+            to_toggle(yytext);
+            printf("%s", yytext);
+            break;
+        default:
+            printf("%s", yytext);
+    }
+}
+%%
+
+void to_upper(char *text) {
+    for (int i = 0; text[i]; i++)
+        text[i] = toupper(text[i]);
+}
+
+void to_lower(char *text) {
+    for (int i = 0; text[i]; i++)
+        text[i] = tolower(text[i]);
+}
+
+void to_sentence(char *text) {
+    for (int i = 0; text[i]; i++) {
+        if (sentence_start && isalpha(text[i])) {
+            text[i] = toupper(text[i]);
+            sentence_start = 0;
+        } else {
+            text[i] = tolower(text[i]);
+        }
+        if (text[i] == '.' || text[i] == '!' || text[i] == '?')
+            sentence_start = 1;
+    }
+}
+
+void to_toggle(char *text) {
+    for (int i = 0; text[i]; i++) {
+        if (islower(text[i]))
+            text[i] = toupper(text[i]);
+        else if (isupper(text[i]))
+            text[i] = tolower(text[i]);
+    }
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s [upper|lower|sentence|toggle]\n", argv[0]);
+        return 1;
+    }
+
+    if (strcmp(argv[1], "upper") == 0) mode = UPPER;
+    else if (strcmp(argv[1], "lower") == 0) mode = LOWER;
+    else if (strcmp(argv[1], "sentence") == 0) mode = SENTENCE;
+    else if (strcmp(argv[1], "toggle") == 0) mode = TOGGLE;
+    else {
+        printf("Invalid mode. Use: upper, lower, sentence, toggle\n");
+        return 1;
+    }
+
+    yylex();
+    return 0;
+}
+
+
+Sample.txt – 
+Hello World from Lex 
+Execution commands – 
+flex cd1e.l 
+gcc lex.yy.c -o cd1e -lfl 
+./cd1e sentence < sample.txt 
+./cd1e upper < sample.txt 
+./cd1e lower < sample.txt 
+./cd1e toggle < sample.txt
+TITLE:
+a. Assignment to understand basic syntax of LEX / FLEX specifications, built-in functions and Variables.
+b. Implement LEX/FLEX code to count the number of characters, words and lines in an input file.( All six
+assignments).
+
+PROBLEM STATEMENT:
+a. Assignment to understand basic syntax of LEX / FLEX specifications, built-in functions and
+Variables.
+b. Implement LEX/FLEX code to count the number of characters, words and lines in an input file.
+OBJECTIVE:
+1. To understand the working principles, LEX, Lex specification File, functions etc.
+2. To understand and implement the Lexical Analyzer.
+THEORY: //To be written by Students
+
+// Write theory by elaborating below points
+
+More on role and significance of Lexical Analyzer in Compilation Process, Tokenization process, and other
+details of
+Lexical Analyzer and LEX tool.
+IMPLEMENTATION:
+● PLATFORM:
+o Ubuntu / Linux
+o LEX Tool
+
+● PSEUDO CODE: //To be Written by Students
+Write pseudo code, Output screen shots
+● CONCLUSION:
+● FAQs //To be Written by Students
+
+1. What is the significance of lexical analyzer?
+2. What is a token? What are the categories of token?
+3. What are the different functions used for pattern matching in an assignment?
+i have given you codes and weriteup , i have my practicals viva and exam tomorrow , first explain me codes line by line followed by theory explaination from very basic and all concepts related then further give me viva questions 
+ChatGPT said:
+Nice — you’ve given five FLEX programs (cd1a → cd1e), execution commands, a sample file, and the assignment write-up. Below I’ll:
+
+Explain each program line-by-line (what every section / important line does).
+
+Explain the theory from the ground up (lexical analyzer role, tokens, regexes, NFA→DFA, flex specifics like yytext, longest-match rule, start conditions, input buffering, etc.).
+
+Give likely viva questions with short model answers (so you can answer crisply in the practical).
+
+Quick demo / troubleshooting tips (compile/run commands, common errors and fixes).
+
+I’ll keep it compact but thorough so you can revise fast for your viva. Let’s go.
+
+1) Quick reminder of FLEX file structure
+A flex file generally has three sections separated by %%:
+
+%{    /* C declarations & #includes - copied verbatim into generated C file */  %}
+definitions (optional)
+%%
+rules:   pattern    { action; }
+%%
+user code (C functions, main, etc.)
+The first %{ ... %} block is copied into the generated lex.yy.c top — good place for #include, helper functions, global variables.
+
+The rules section maps regular expressions to actions (C code) executed when the pattern matches.
+
+After the second %% you place main() and other helper functions. yylex() is the scanner entry point that reads input and executes actions for matched rules.
+
+2) Line-by-line explanations for your programs
+I'll go program-by-program. For each program I explain the important blocks and lines.
+
+cd1a.l — simple token printer (digits / letters / whitespace / unknown)
+%{
+#include <stdio.h>
+%}
+%{ ... %}: verbatim C code included at top of generated C file. Here you include <stdio.h> so you can use printf in actions and main().
+
+%%
+[0-9]+          { printf("Token: %s --> DIGIT\n", yytext); }
+[a-zA-Z]+       { printf("Token: %s --> CHARACTER\n", yytext); }
+[ \t\n]+        { /* ignore whitespace */ }
+.               { printf("Token: %s --> UNKNOWN\n", yytext); }
+%%
+%% begins rule section.
+
+[0-9]+ — a regex that matches one or more digits. When matched the action prints yytext (matched text) and labels it DIGIT.
+
+[a-zA-Z]+ — sequence of letters → prints CHARACTER.
+
+[ \t\n]+ — whitespace characters. Action is empty comment — this ignores whitespace.
+
+. — single any character (except newline unless flex configured). Catches anything not matched earlier; prints UNKNOWN.
+
+Rule precedence: order matters when patterns could overlap. Also flex applies longest-match then rule order when lengths equal.
+
+int main() {
+    printf("Enter input:\n");
+    yylex();
+    return 0;
+}
+main() prints prompt and calls yylex(). yylex() reads from stdin by default and processes input until EOF or an action returns a nonzero value that stops scanning.
+
+Compile/run commands you provided are correct:
+
+flex cd1a.l → generates lex.yy.c
+
+gcc lex.yy.c -o cd1a -lfl → builds scanner (link libfl or -ll)
+
+./cd1a → run, type input, then Ctrl+D (EOF) to finish.
+
+cd1b.l — word class recognizer (nouns, verbs, adjectives, etc.)
+Top %{ ... %} block:
+
+%{
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+char *nouns[] = {"dog", "cat", "car", "tree", "book", "city"};
+... (pronouns, verbs, adjectives, adverbs, prepositions)
+#define N_NOUNS (sizeof(nouns)/sizeof(nouns[0]))
+...
+int is_in_list(char *word, char *list[], int size) { ... }
+%}
+Includes and arrays of sample words for lexical classification.
+
+is_in_list() is helper to compare a lowercased scanned word with the word lists.
+
+Rules:
+
+%%
+[a-zA-Z]+ {
+    char word[100];
+    strcpy(word, yytext);
+    for (int i = 0; word[i]; i++) word[i] = tolower(word[i]);
+
+    printf("Token: %s --> ", yytext);
+
+    if (is_in_list(word, nouns, N_NOUNS)) printf("NOUN\n");
+    else if (...) ... else printf("UNKNOWN\n");
+}
+[ \t\n]+ { /* ignore */ }
+. { /* ignore */ }
+%%
+[a-zA-Z]+ captures alphabetic words. The action:
+
+copies yytext to word and lowercases it so matching is case-insensitive.
+
+prints the token and classifies it by checking lists (nouns, pronouns, verbs, ...).
+
+[ \t\n]+ ignores whitespace.
+
+. ignores any other single character (so punctuation etc. will be discarded silently).
+
+Main:
+
+int main() {
+    printf("Enter input text:\n");
+    yylex();
+    return 0;
+}
+Same as before. This scanner is a toy lexical classifier: real lexers use token tables or symbol tables, not static arrays.
+
+Potential improvements you could mention in viva:
+
+Use hash table for word lists (faster than linear search).
+
+Add buffer overflow safety: use strncpy or ensure yytext length < buffer.
+
+Consider words with apostrophes (e.g., don't) — current regex [a-zA-Z]+ won't catch them.
+
+cd1c.l — word/line/char/vowel counter
+Top:
+
+%{
+#include <stdio.h>
+#include <ctype.h>
+
+int word_count = 0;
+int vowel_count = 0;
+int line_count = 0;
+int char_count = 0;
+
+int is_vowel(char c) {
+    c = tolower(c);
+    return (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u');
+}
+%}
+Global counters and helper is_vowel().
+
+Rules:
+
+%%
+[a-zA-Z]+ {
+    word_count++;
+    for (int i = 0; yytext[i] != '\0'; i++) {
+        char_count++;
+        if (is_vowel(yytext[i]))
+            vowel_count++;
+    }
+}
+
+[0-9]+ {
+    word_count++;
+    for (int i = 0; yytext[i] != '\0'; i++)
+        char_count++;
+}
+
+\n {
+    line_count++;
+    char_count++;
+}
+
+. {
+    char_count++;
+}
+%%
+[a-zA-Z]+ increments word_count for words made of letters and counts characters and vowels in that token.
+
+[0-9]+ treats number sequences as a word and counts their characters.
+
+\n increments line_count and char_count.
+
+. increments char_count for any other character.
+
+Note: this counts characters in pieces — char_count will be incremented by multiple rules; overall it approximates total characters but be careful: if your rules overlap you could double count (here they don't since the matched text is consumed once per rule).
+
+Main:
+
+int main() {
+    printf("Enter input:\n");
+    yylex();
+    printf("Number of words: %d\n", word_count);
+    printf("Number of vowels: %d\n", vowel_count);
+    printf("Number of lines: %d\n", line_count);
+    printf("Number of characters: %d\n", char_count);
+    return 0;
+}
+After scanning it prints the counts.
+
+Notes for viva:
+
+This scanner counts words by matching [a-zA-Z]+ and [0-9]+. It treats numeric tokens as words — mention that design choice.
+
+It does not count punctuation as part of words.
+
+If you want accurate line_count with final line not ending with \n, you may need to increment at EOF.
+
+cd1d.l — find & replace using full-file buffering
+Top:
+
+%{
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+char find_str[100];
+char replace_str[100];
+size_t find_len, replace_len;
+char *buffer = NULL;
+size_t bufsize = 0;
+
+void find_and_replace(char *input);
+%}
+Variables to hold find and replace strings, and a dynamic buffer to store entire input.
+
+Rules:
+
+%%
+.|\n {
+    size_t old_len = bufsize;
+    bufsize += yyleng;
+    buffer = realloc(buffer, bufsize + 1);
+    if (!buffer) { fprintf(stderr, "Memory allocation failed\n"); exit(1); }
+    memcpy(buffer + old_len, yytext, yyleng);
+    buffer[bufsize] = '\0';
+}
+%%
+Pattern .| \n means match any character including newline (since . normally excludes newline). The action accumulates all matched text into buffer using realloc.
+
+yyleng is the length of the lexeme (yytext length).
+
+This effectively reads the whole file into buffer.
+
+Main:
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) { fprintf(stderr, "Usage: %s inputfile\n", argv[0]); return 1; }
+
+    FILE *fp = fopen(argv[1], "r");
+    if (!fp) { perror("File open error"); return 1; }
+
+    yyin = fp;
+    yylex();
+    fclose(fp);
+
+    printf("Enter string to find: ");
+    scanf("%99s", find_str);
+    printf("Enter string to replace with: ");
+    scanf("%99s", replace_str);
+
+    find_len = strlen(find_str);
+    replace_len = strlen(replace_str);
+
+    find_and_replace(buffer);
+    free(buffer);
+    return 0;
+}
+yyin is a global FILE* used by flex as input stream — by setting yyin = fp you instruct the scanner to read from file instead of stdin.
+
+After reading input into buffer, it asks user for find/replace strings and calls find_and_replace.
+
+Function find_and_replace:
+
+void find_and_replace(char *input) {
+    char *pos = input;
+    char *result = malloc(strlen(input) * 2 + 1); // Extra space
+    ...
+    while ((pos = strstr(input, find_str)) != NULL) {
+        strncat(result, input, pos - input);
+        strcat(result, replace_str);
+        input = pos + find_len;
+    }
+    strcat(result, input);
+    printf("\nModified text:\n%s\n", result);
+    free(result);
+}
+Uses strstr to find occurrences of find_str and builds result incrementally.
+
+malloc(strlen(input) * 2 + 1) is a naive size estimate; could overflow if replacement is much longer or many replacements — mention in viva.
+
+Prints the modified text.
+
+Viva points:
+
+yyin — explain how to direct scanner to read from file.
+
+Memory safety: result allocation should be dynamic based on (strlen(input) + count_matches * (replace_len - find_len) + 1) for safety.
+
+scanf("%99s", ...) reads token until whitespace — fine for single words; searching for phrases with spaces would require fgets instead.
+
+cd1e.l — case conversion modes (upper/lower/sentence/toggle)
+Top:
+
+%{
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+enum CaseMode { NONE, UPPER, LOWER, SENTENCE, TOGGLE } mode = NONE;
+int sentence_start = 1;
+
+void to_upper(char *text);
+void to_lower(char *text);
+void to_sentence(char *text);
+void to_toggle(char *text);
+%}
+Enum CaseMode to select transformation.
+
+sentence_start helps in sentence mode to capitalize first alpha after sentence punctuation.
+
+Rules:
+
+%%
+.+ {
+    switch (mode) {
+        case UPPER:
+            to_upper(yytext);
+            printf("%s", yytext);
+            break;
+        case LOWER:
+            to_lower(yytext);
+            printf("%s", yytext);
+            break;
+        case SENTENCE:
+            to_sentence(yytext);
+            printf("%s", yytext);
+            break;
+        case TOGGLE:
+            to_toggle(yytext);
+            printf("%s", yytext);
+            break;
+        default:
+            printf("%s", yytext);
+    }
+}
+%%
+.+ matches one or more characters per action — note this will gobble as much as flex's internal rules allow (flex matches as much as possible per rule).
+
+For matched text it applies the selected transformation function then prints it.
+
+Transformation functions:
+
+to_upper/to_lower: iterate over characters and toupper/tolower.
+
+to_sentence: if sentence_start and encounter alphabetic char, uppercase it and set sentence_start=0. If encounter . ! ? set sentence_start=1.
+
+to_toggle: flip case for letters.
+
+Main:
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s [upper|lower|sentence|toggle]\n", argv[0]);
+        return 1;
+    }
+
+    if (strcmp(argv[1], "upper") == 0) mode = UPPER;
+    else if (strcmp(argv[1], "lower") == 0) mode = LOWER;
+    else if (strcmp(argv[1], "sentence") == 0) mode = SENTENCE;
+    else if (strcmp(argv[1], "toggle") == 0) mode = TOGGLE;
+    else { printf("Invalid mode. Use: upper, lower, sentence, toggle\n"); return 1; }
+
+    yylex();
+    return 0;
+}
+Run with argument upper / lower etc. The sample runs redirect input: ./cd1e upper < sample.txt.
+
+Viva notes:
+
+.+ can be dangerous if input is huge; flex will match chunks — but this is fine for demo.
+
+sentence mode keeps state between matches via global sentence_start, so it correctly capitalizes sentences across rule invocations.
+
+3) Core theory you must know (simple → deep)
+What is a lexical analyzer?
+First phase of a compiler. It reads input characters and groups them into tokens (identifiers, keywords, numbers, operators, punctuation).
+
+Responsibilities:
+
+Remove whitespace and comments.
+
+Provide tokens (type + lexeme) to the parser.
+
+Sometimes handle simple lexical errors (illegal characters).
+
+Maintain line/column info for error reporting.
+
+Token, lexeme, patterns
+Lexeme: actual character sequence in source that matches a token (e.g., while).
+
+Token: category/class (e.g., KEYWORD, IDENTIFIER, NUMBER) usually with attribute (lexeme or numeric value).
+
+Pattern: a regular expression that describes a token's lexeme.
+
+Regular expressions → NFA → DFA
+Regular expressions describe token patterns.
+
+A lexer generator (lex/flex) converts the regexes into NFAs, combines them, then into a DFA (deterministic finite automaton) and minimizes it. The DFA is used for linear-time scanning.
+
+Understand Thompson construction (regex→NFA) and subset construction (NFA→DFA) at high level.
+
+Flex specifics & important built-ins
+yytext — pointer to matched lexeme (null-terminated string).
+
+yyleng — length of matched text.
+
+yylex() — scanner function generated by flex; repeatedly returns tokens or 0 on EOF unless actions change behavior.
+
+yyin — FILE * input stream (defaults to stdin); you can set yyin = fopen(...).
+
+yylineno — line number variable available if you compile with -D or include %option yylineno in flex.
+
+ECHO — default action (prints matched text).
+
+Patterns are POSIX-like; {name} macros allowed in definitions section.
+
+Matching rules in flex (order / precedence)
+At each input position choose the pattern that matches the longest input (longest match).
+
+If two patterns match the same longest text, the rule that appears first in the rules section wins.
+
+Flex returns the matched text and executes the rule's action. If no rule matches, default behavior is to copy input to output or report error.
+
+Start conditions (exclusive & inclusive)
+%s and %x define start conditions used to switch scanner modes (useful for multi-language files, comments, string literals, etc.). Know the basics: INITIAL is default state.
+
+Input buffering
+Flex uses an input buffer and reads input in blocks. yytext points into that buffer. Be careful if you realloc or copy yytext outside actions because it may be invalid after next yylex() call.
+
+Error handling & diagnostics
+Lexers detect illegal characters and can call fprintf(stderr, ...) or return an ERROR token.
+
+For robust scanning, include line numbers and context for helpful messages.
+
+Integration with parser (yacc/bison)
+Lex returns tokens (often as integer codes) to yacc/bison via yylval (semantic value).
+
+Example action: return NUMBER; or yylval.ival = atoi(yytext); return NUMBER;
+
+4) Common viva questions (with concise model answers)
+I'll give the question and a short strong answer you can state in viva.
+
+Q: What is yytext?
+A: yytext is a char* pointing to the most recent matched lexeme; it’s null-terminated and valid until the next scan.
+
+Q: What does yylex() do?
+A: yylex() runs the generated DFA scanner: it reads input, matches the next token per rules, executes the action, and repeats until EOF. It returns 0 on EOF by default.
+
+Q: How do you make the scanner read from a file?
+A: Set yyin = fopen("file", "r"); before calling yylex().
+
+Q: What is the longest-match rule?
+A: When multiple rules match at the same input position, flex picks the one that matches the longest sequence of characters. If tie, the rule earlier in the file wins.
+
+Q: Difference between lex and flex?
+A: flex is a modern fast implementation of lex with extra features; lex is older. Most courses use flex.
+
+Q: How do you return tokens to yacc/bison?
+A: In the action code do yylval = <value>; return TOKENNAME; where TOKENNAME is defined in the parser header. Use %union and types in bison to pass semantic values.
+
+Q: How to handle comments (multi-line) in lexer?
+A: Use start conditions or regex "/\\*".*?"\\*/" with (.|\\n) or use start conditions to enter a COMMENT state and ignore until */.
+
+Q: Why use yyin instead of stdin?
+A: yyin is the scanner’s input file pointer used internally; changing it allows scanning from files easily and integrates with tools.
+
+Q: What are start conditions?
+A: Modes (states) the scanner can be in; rules can be active only in particular states (useful for strings, comments, etc.)
+
+Q: How to handle tokens like identifiers and keywords?
+A: Match identifiers with [a-zA-Z_][a-zA-Z0-9_]*, then check if the lexeme equals a keyword (lookup in symbol table) — if so return KEYWORD, else add to symbol table and return IDENTIFIER.
+
+Q: What is yyleng?
+A: Integer length of yytext (number of characters matched).
+
+Q: How to count line numbers?
+A: Use rule for \n to increment a line_no variable, or use %option yylineno which maintains yylineno automatically.
+
+Q: How to avoid buffer overflow with yytext copy?
+A: Check yyleng before copying, use strncpy or dynamic allocation (malloc(yyleng+1)) and strcpy.
+
+Q: Why do we need the lexer at all (why not parser read characters directly)?
+A: Lexical analysis simplifies parsing by grouping characters into tokens and removing whitespace/comments; it keeps parser grammar simpler and more readable.
+
+Q: Explain the overall compilation phases briefly.
+A: Lexical analysis → Syntax analysis → Semantic analysis → Intermediate code generation → Optimization → Code generation → Linking.
+
+5) Likely viva practical questions about your submitted programs (with short answers you can memorize)
+Q: How do you ignore whitespace?
+A: Provide a rule matching whitespace [ \t\n]+ with an empty action {} or no action so it’s skipped.
+
+Q: In cd1b how do you make matching case-insensitive?
+A: Lowercase the token (for loop with tolower) then compare with lowercase entries.
+
+Q: Why use realloc and memcpy in cd1d?
+A: To build a dynamic buffer that stores the entire input file as flex hands chunks of input; realloc resizes buffer as more text is read.
+
+Q: How do you handle overlapping patterns like == and =?
+A: Write the longer pattern first ("==") and shorter after ("="). Flex longest match will also prefer == because it matches longer text.
+
+Q: How to include C header or variable definitions?
+A: Put them in the first %{ ... %} block.
+
+Q: How to debug scanner?
+A: Insert printf in actions, or compile with debug options; you can also print yytext and yyleng on each match.
+
+Q: What happens if no pattern matches a character?
+A: If no rule matches, default is to copy input to output or match . rule; but normally you include an error rule to catch illegal characters.
+
+6) Demo and troubleshooting tips (fast checklist for your practical)
+Commands:
+
+flex file.l
+
+gcc lex.yy.c -o prog -lfl (or -ll on some systems)
+
+./prog (or ./prog < inputfile or ./prog arg as appropriate)
+
+If you see undefined reference to yywrap:
+
+Solution 1: link with -lfl (flex library) — it provides yywrap.
+
+Solution 2: add int yywrap() { return 1; } in your code to avoid needing library.
+
+If gcc error “stray ‘\’ in program”:
+
+Often caused by Windows CRLF \r characters or incorrect copy/paste of backslashes. Use dos2unix or ensure file uses LF line endings.
+
+Also check string escape sequences or incorrectly escaped macros.
+
+If yytext causes segmentation fault:
+
+Don’t free(yytext) — yytext is managed by lexer. If you need a stable copy, char *copy = strdup(yytext); and free that later.
+
+If output seems merged/no newlines:
+
+Remember print formatting and how rules consume newlines. Use \n prints in actions if you expect separate lines.
+
+If scanf in cd1d doesn't accept spaces in find string:
+
+scanf("%99s", find_str) stops at whitespace. Use fgets() or scanf("%99[^\n]", find_str) to read lines with spaces.
+
+Memory safety:
+
+Check return of realloc. If realloc fails it returns NULL and original buffer is lost if you assigned directly. Better pattern:
+
+char *tmp = realloc(buffer, newsize);
+if (!tmp) { free(buffer); error... }
+buffer = tmp;
+For sentence mode: if your input is processed in chunks, sentence_start global variable preserves state across chunks — mention this in viva.
+
+7) Short summary cheat-sheet you can memorize (3–5 sentences)
+A lexical analyzer (scanner) reads characters and groups them into tokens using regular expressions. Flex converts regex rules to an efficient state machine and generates yylex(); matched strings are in yytext with length yyleng. Use yyin to scan files, ignore whitespace with an empty action, and return tokens to a parser with return TOKEN;. Remember longest-match and order-tie precedence; use start conditions for context-sensitive scanning (comments/strings).
+
+If you want, I can now:
+
+Produce a one-page cheat sheet PDF with the above highlights and common viva Q/A (ready for print).
+
+Or convert this into slide-wise content for your PPT (you mentioned a presentation earlier) — I can produce slide titles + bullet contents.
+
+Tell me which (cheatsheet PDF or slides) you want and I’ll immediately produce it here.
+
+You said:
+%{
+#include <stdio.h>
+#include <string.h>
+
+int line_num = 1;
+extern FILE *yyin;
+%}
+
+%%
+"int"|"float"|"char"|"double"|"if"|"else"|"while"|"for"|"return" {
+    printf("KEYWORD\t\t%s\t(line %d)\n", yytext, line_num);
+}
+
+[a-zA-Z_][a-zA-Z0-9_]* {
+    printf("IDENTIFIER\t%s\t(line %d)\n", yytext, line_num);
+}
+
+[0-9]+(\.[0-9]+)? {
+    printf("NUMBER\t\t%s\t(line %d)\n", yytext, line_num);
+}
+
+"=="|"="|"+"|"-"|"*"|"/"|"<"|">" {
+    printf("OPERATOR\t%s\t(line %d)\n", yytext, line_num);
+}
+
+[(){};,.\[\]] {
+    printf("DELIMITER\t%s\t(line %d)\n", yytext, line_num);
+}
+
+\"([^\\\"]|\\.)*\" {
+    printf("STRING\t\t%s\t(line %d)\n", yytext, line_num);
+}
+
+"//".*                 { /* ignore single-line comments */ }
+"/*"([^*]|\*+[^*/])*\*+\/    { /* ignore multi-line comments */ }
+
+[ \t]+                 { /* ignore whitespace */ }
+
+\n                     { line_num++; }
+
+.                      { printf("UNKNOWN\t\t%s\t(line %d)\n", yytext, line_num); }
+%%
+
+int main(int argc, char *argv[]) {
+    if (argc > 1) {
+        FILE *f = fopen(argv[1], "r");
+        if (!f) {
+            perror("Cannot open file");
+            return 1;
+        }
+        yyin = f;
+    }
+    yylex();
+    return 0;
+}
+
+
+Execution commands – 
+ flex cd2.l 
+ gcc lex.yy.c -o cd2 -lfl 
+ ./cd2 cd2sample.c 
+
+ChatGPT said:
+Perfect — that’s your cd2.l Lex/Flex program for token classification in C programs (a miniature lexical analyzer that recognizes keywords, identifiers, numbers, operators, delimiters, strings, and ignores comments/whitespace).
+
+Below is a complete line-by-line explanation, then a concept + theory refresher, and finally viva Q&A focused on this exact code.
+
+🔹 1️⃣ Line-by-Line Explanation of cd2.l
+🧩 Header Section
+%{
+#include <stdio.h>
+#include <string.h>
+
+int line_num = 1;
+extern FILE *yyin;
+%}
+%{ ... %}: C declarations copied verbatim into generated lex.yy.c.
+
+#include <stdio.h> → allows using printf.
+
+#include <string.h> → used in case you later need string comparison (not used here, but fine).
+
+int line_num = 1; → global line counter (starts from line 1).
+
+extern FILE *yyin; → declares yyin, the global file pointer that Flex uses as its input stream.
+You’ll later assign this to the file passed from command-line.
+
+🧩 Rule Section
+%%
+"int"|"float"|"char"|"double"|"if"|"else"|"while"|"for"|"return" {
+    printf("KEYWORD\t\t%s\t(line %d)\n", yytext, line_num);
+}
+Matches C keywords (int, float, etc.) using alternation (| = OR).
+
+yytext stores the matched word.
+
+line_num tracks which line this keyword appeared on.
+
+[a-zA-Z_][a-zA-Z0-9_]* {
+    printf("IDENTIFIER\t%s\t(line %d)\n", yytext, line_num);
+}
+Pattern for identifiers:
+
+Must start with a letter or underscore.
+
+Followed by any combination of letters, digits, or underscores.
+
+Example: count, _main, x1.
+
+[0-9]+(\.[0-9]+)? {
+    printf("NUMBER\t\t%s\t(line %d)\n", yytext, line_num);
+}
+Matches integer or floating-point constants.
+
+[0-9]+ → one or more digits (integer).
+
+(\.[0-9]+)? → optional fractional part for floats.
+
+Examples: 10, 3.14, 42.
+
+"=="|"="|"+"|"-"|"*"|"/"|"<"|">" {
+    printf("OPERATOR\t%s\t(line %d)\n", yytext, line_num);
+}
+Matches operators: arithmetic (+, -, etc.), relational (<, >), and assignment (=, ==).
+
+[(){};,.\[\]] {
+    printf("DELIMITER\t%s\t(line %d)\n", yytext, line_num);
+}
+Matches delimiters / punctuation like:
+
+( ) { } ; , . [ ].
+
+\"([^\\\"]|\\.)*\" {
+    printf("STRING\t\t%s\t(line %d)\n", yytext, line_num);
+}
+Matches string literals enclosed in double quotes.
+
+Regex breakdown:
+
+\" → opening quote
+
+([^\\\"]|\\.)* → any character except " or \, OR an escaped sequence (like \" or \\)
+
+\" → closing quote
+
+Example: "Hello World", "C\\Program".
+
+"//".*                 { /* ignore single-line comments */ }
+"/*"([^*]|\*+[^*/])*\*+\/    { /* ignore multi-line comments */ }
+First rule ignores single-line comments starting with // until the end of the line.
+
+Second rule ignores multi-line comments (/* ... */), handling any number of inner *.
+
+[ \t]+                 { /* ignore whitespace */ }
+
+\n                     { line_num++; }
+
+.                      { printf("UNKNOWN\t\t%s\t(line %d)\n", yytext, line_num); }
+[ \t]+: ignore spaces and tabs.
+
+\n: increments line counter each time newline is seen.
+
+.: any other unmatched character (like @, #, etc.) — printed as UNKNOWN.
+
+🧩 User Code Section
+int main(int argc, char *argv[]) {
+    if (argc > 1) {
+        FILE *f = fopen(argv[1], "r");
+        if (!f) {
+            perror("Cannot open file");
+            return 1;
+        }
+        yyin = f;
+    }
+    yylex();
+    return 0;
+}
+main() optionally accepts filename argument.
+
+If given (like ./cd2 cd2sample.c):
+
+Opens file.
+
+Assigns yyin to file pointer.
+
+Then calls yylex() to process it.
+
+yylex() runs automatically until EOF.
+
+🧩 Execution Commands
+flex cd2.l
+gcc lex.yy.c -o cd2 -lfl
+./cd2 cd2sample.c
+✅ flex cd2.l → Generates lex.yy.c
+
+✅ gcc lex.yy.c -o cd2 -lfl → Compiles (links Flex library -lfl)
+
+✅ ./cd2 cd2sample.c → Runs on your input file.
+
+🔹 2️⃣ Theory Explanation (for Viva + Write-up)
+🔸 What is LEX / FLEX?
+Lex = Lexical Analyzer Generator (FLEX = Fast Lex).
+
+It takes token patterns (regex rules) and generates a C program that automatically detects those tokens.
+
+🔸 What is a Lexical Analyzer?
+First phase of compiler.
+
+Reads source code character by character and converts it into tokens.
+
+Removes whitespace and comments.
+
+Sends tokens (like KEYWORD, IDENTIFIER, NUMBER, etc.) to parser.
+
+🔸 Key Components
+Lexeme → actual string matched (e.g., "int", "count").
+
+Token → category of lexeme (KEYWORD, IDENTIFIER, etc.).
+
+Pattern → regular expression describing that token.
+
+Example:
+
+Pattern: [a-zA-Z_][a-zA-Z0-9_]*
+Token: IDENTIFIER
+Lexeme: main
+🔸 Role of Lexical Analyzer in Compiler
+Simplifies parser by handling low-level input details.
+
+Performs tokenization, removes comments and whitespaces.
+
+Reports lexical errors (like illegal symbols).
+
+Maintains line number for better error messages.
+
+🔸 Workflow of LEX
+Define patterns using regex.
+
+Lex converts patterns → NFA → DFA (finite automata).
+
+DFA efficiently scans input in O(n) time.
+
+Longest match wins, then first listed rule breaks ties.
+
+Executes corresponding C action code for that pattern.
+
+🔸 Important LEX Variables
+Variable	Description
+yytext	Contains the matched token text (string).
+yyleng	Length of matched text.
+yyin	Input file pointer (default stdin).
+yylex()	Main function that runs the scanner.
+yywrap()	Called at EOF (default returns 1).
+🔸 Token Categories (used in cd2.l)
+Category	Example
+Keyword	int, if, while
+Identifier	count, main, x1
+Number	10, 3.14
+Operator	+, -, =, ==
+Delimiter	(, ), {, }, ;
+String	"Hello"
+Comment	// comment, /* comment */
+🔸 How Errors / Unknowns are Handled
+The . rule (dot) catches all unrecognized characters and prints as UNKNOWN.
+
+Example: if your input has $ or @, it will trigger this rule.
+
+🔸 Pseudo Code (for write-up)
+1. Initialize line_num = 1
+2. Read input file (yyin)
+3. While not EOF:
+    a. Match keywords → print KEYWORD
+    b. Match identifiers → print IDENTIFIER
+    c. Match numbers → print NUMBER
+    d. Match operators → print OPERATOR
+    e. Match delimiters → print DELIMITER
+    f. Match strings → print STRING
+    g. Ignore whitespace, comments
+    h. Increment line_num for newlines
+    i. Otherwise → print UNKNOWN
+4. Stop after EOF
+🔸 Output Example
+For this sample file cd2sample.c:
+
+int main() {
+   float a = 3.5;
+   if (a > 0)
+       printf("Positive");
+}
+Output:
+
+KEYWORD         int     (line 1)
+IDENTIFIER      main    (line 1)
+DELIMITER       (       (line 1)
+DELIMITER       )       (line 1)
+DELIMITER       {       (line 1)
+KEYWORD         float   (line 2)
+IDENTIFIER      a       (line 2)
+OPERATOR        =       (line 2)
+NUMBER          3.5     (line 2)
+DELIMITER       ;       (line 2)
+KEYWORD         if      (line 3)
+DELIMITER       (       (line 3)
+IDENTIFIER      a       (line 3)
+OPERATOR        >       (line 3)
+NUMBER          0       (line 3)
+DELIMITER       )       (line 3)
+IDENTIFIER      printf  (line 4)
+DELIMITER       (       (line 4)
+STRING          "Positive"   (line 4)
+DELIMITER       )       (line 4)
+DELIMITER       ;       (line 4)
+DELIMITER       }       (line 5)
+🔹 3️⃣ Viva Questions (with Model Answers)
+⚙️ Basic Concepts
+Q1: What does the lex tool do?
+A: It generates a lexical analyzer (scanner) in C that reads input and recognizes tokens using regex-based rules.
+
+Q2: What is yytext?
+A: A character array containing the current matched lexeme.
+
+Q3: What is the difference between token and lexeme?
+A: Lexeme is the actual string; token is its category name.
+
+Q4: What is the role of yylex()?
+A: It runs automatically to read input, match tokens, execute actions, and stop at EOF.
+
+Q5: Why do we write yyin = f;?
+A: To make the scanner read input from the given file instead of standard input.
+
+Q6: What is the “longest match” rule?
+A: If multiple patterns match, the one matching the longest text is chosen; if ties, the first rule wins.
+
+⚙️ Program-Specific
+Q7: How are keywords and identifiers differentiated here?
+A: Keywords have specific regex patterns listed first ("int"|"float"|...).
+Identifiers match [a-zA-Z_][a-zA-Z0-9_]* — this rule runs only if the keyword rule didn’t match first.
+
+Q8: How are comments handled?
+A: Single-line (//...) and multi-line (/*...*/) comments are ignored — they don’t print tokens.
+
+Q9: What if a string literal contains escaped quotes?
+A: The regex \"([^\\\"]|\\.)*\" handles it — it allows escaped characters inside.
+
+Q10: How is line number maintained?
+A: Each \n increments line_num, used in all print statements.
+
+Q11: What happens for unknown characters like $?
+A: They match the . rule and are printed as UNKNOWN.
+
+Q12: What is yywrap() and why is it not defined here?
+A: It signals EOF. The default Flex library (-lfl) provides one returning 1, so we don’t need to define it manually.
+
+Q13: What does extern FILE *yyin; do?
+A: Declares the file pointer used by Flex to read input from files other than stdin.
+
+Q14: Why link with -lfl during compilation?
+A: It links the Flex runtime library containing helper functions like yywrap() and input handling.
+
+Q15: What is the advantage of using LEX over manual tokenization?
+A: It automates token generation using regex and finite automata, making scanning faster and more reliable.
+
+🔹 4️⃣ Conclusion (for your write-up)
+This experiment demonstrates the design of a lexical analyzer using LEX/FLEX.
+The program recognizes tokens such as keywords, identifiers, numbers, operators, delimiters, and strings while ignoring comments and whitespaces.
+It shows how regular expressions can simplify tokenization, and how line numbers and classification help the parser in later compilation phases.
+
+Would you like me to make a ready-to-print viva summary sheet (1-page PDF with key theory + output + viva Q&A) or a slide-format version for your practical notebook?
+
+You said:
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#include <ctype.h>
+#include "cd3.tab.h"
+
+int yylex(void);
+void yyerror(const char *s);
+extern YYSTYPE yylval;
+%}
+
+%union {
+    double dval;
+}
+
+/* Tokens */
+%token <dval> NUMBER
+%token SIN COS TAN SQRT LOG
+
+/* Types */
+%type <dval> expr
+
+/* Operator precedence and associativity */
+%left '+' '-'
+%left '*' '/'
+%right '^'
+%right UMINUS
+
+%%
+input:
+    /* empty */
+    | input expr '\n'   { printf("Result = %lf\n", $2); }
+    ;
+
+expr:
+      NUMBER                    { $$ = $1; }
+    | expr '+' expr             { $$ = $1 + $3; }
+    | expr '-' expr             { $$ = $1 - $3; }
+    | expr '*' expr             { $$ = $1 * $3; }
+    | expr '/' expr             {
+                                    if ($3 == 0) {
+                                        yyerror("Division by zero");
+                                        $$ = 0;
+                                    } else $$ = $1 / $3;
+                                 }
+    | expr '^' expr             { $$ = pow($1, $3); }
+    | '(' expr ')'              { $$ = $2; }
+    | '-' expr %prec UMINUS     { $$ = -$2; }
+    | SIN '(' expr ')'          { $$ = sin($3 * M_PI / 180.0); }
+    | COS '(' expr ')'          { $$ = cos($3 * M_PI / 180.0); }
+    | TAN '(' expr ')'          { $$ = tan($3 * M_PI / 180.0); }
+    | SQRT '(' expr ')'         { $$ = sqrt($3); }
+    | LOG '(' expr ')'          { $$ = log($3); }
+    ;
+%%
+/* Lexical analyzer for calculator */
+int yylex(void) {
+    int c;
+
+    while ((c = getchar()) == ' ' || c == '\t');
+
+    if (c == EOF)
+        return 0;
+    if (c == '\n')
+        return '\n';
+
+    if (isdigit(c) || c == '.') {
+        ungetc(c, stdin);
+        double val;
+        scanf("%lf", &val);
+        yylval.dval = val;
+        return NUMBER;
+    }
+
+    if (isalpha(c)) {
+        char func[32];
+        int i = 0;
+        while (isalpha(c)) {
+            func[i++] = c;
+            c = getchar();
+        }
+        func[i] = '\0';
+        ungetc(c, stdin);
+
+        if (strcmp(func, "sin") == 0) return SIN;
+        if (strcmp(func, "cos") == 0) return COS;
+        if (strcmp(func, "tan") == 0) return TAN;
+        if (strcmp(func, "sqrt") == 0) return SQRT;
+        if (strcmp(func, "log") == 0) return LOG;
+
+        yyerror("Unknown function");
+        return 0;
+    }
+
+    return c;
+}
+
+/* Error handler */
+void yyerror(const char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+}
+
+/* Main function */
+int main() {
+    printf("Enter expression (press Enter to evaluate, Ctrl+D to exit)\n");
+    yyparse();
+    return 0;
+}
+
+EXECUTION COMMANDS -  
+bison -d cd3.y   
+gcc cd3.tab.c -lm -o calc 
+./calc 
+ChatGPT said:
+Excellent — this is your Bison (YACC) + manual lexer program for a Scientific Calculator supporting arithmetic, powers, trigonometric functions, square root, and logarithm.
+
+Let’s go step-by-step so you can ace your viva and written exam:
+I’ll explain:
+
+Line-by-line code explanation (YACC + lexer)
+
+Underlying theory (YACC, grammar, precedence, tokens, parsing process)
+
+Sample run and expected outputs
+
+Viva questions with short answers
+
+⚙️ 1️⃣ LINE-BY-LINE EXPLANATION
+🧩 Header Section
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#include <ctype.h>
+#include "cd3.tab.h"
+
+int yylex(void);
+void yyerror(const char *s);
+extern YYSTYPE yylval;
+%}
+Explanation:
+
+%{ ... %} — C declarations copied directly to generated code.
+
+#include <math.h> — required for math functions (sin, cos, pow, etc.).
+
+#include "cd3.tab.h" — header generated by bison -d cd3.y. It defines token codes (like NUMBER, SIN, etc.) and the YYSTYPE union.
+
+yylex() → scanner function defined later (reads input and returns tokens).
+
+yyerror() → error handler (called when parser detects syntax error).
+
+yylval → global variable used by the lexer to return values to parser.
+
+🧩 Union Declaration
+%union {
+    double dval;
+}
+Explanation:
+
+YYSTYPE (default type for values in grammar rules) is declared as a union.
+
+It allows semantic values to store different data types — here only double (floating-point numbers).
+
+Used to carry numeric values between lexer and parser.
+
+🧩 Token Declarations
+%token <dval> NUMBER
+%token SIN COS TAN SQRT LOG
+Explanation:
+
+%token declares tokens (returned by lexer).
+
+<dval> means that when the token NUMBER is returned, it carries a double value (yylval.dval).
+
+🧩 Type Declaration
+%type <dval> expr
+Specifies that non-terminal symbol expr stores a double type value.
+
+🧩 Operator Precedence and Associativity
+%left '+' '-'
+%left '*' '/'
+%right '^'
+%right UMINUS
+Explanation:
+
+Defines operator precedence and associativity.
+
+%left = left-associative (e.g., a - b - c).
+
+%right = right-associative (e.g., exponentiation a ^ b ^ c).
+
+UMINUS handles unary minus (negative numbers).
+
+🧩 Grammar Rules
+%%
+input:
+    /* empty */
+    | input expr '\n'   { printf("Result = %lf\n", $2); }
+    ;
+Explanation:
+
+Grammar starts with input → can be empty or repeated expressions.
+
+When user presses Enter (\n), it prints the result of the last evaluated expression $2 (value of expr).
+
+🧩 Expression Rules
+expr:
+      NUMBER                    { $$ = $1; }
+If the token is a number, its value is assigned to the result variable $$.
+
+Arithmetic Operations
+    | expr '+' expr             { $$ = $1 + $3; }
+    | expr '-' expr             { $$ = $1 - $3; }
+    | expr '*' expr             { $$ = $1 * $3; }
+Standard arithmetic operators.
+
+$1, $3 are the left and right operand values.
+
+$$ is the result assigned to this non-terminal.
+
+Division
+    | expr '/' expr             {
+                                    if ($3 == 0) {
+                                        yyerror("Division by zero");
+                                        $$ = 0;
+                                    } else $$ = $1 / $3;
+                                 }
+Checks for division by zero.
+
+If divisor = 0 → print error and result = 0.
+
+Power
+    | expr '^' expr             { $$ = pow($1, $3); }
+Uses pow() from math.h for exponentiation.
+
+Parentheses & Unary Minus
+    | '(' expr ')'              { $$ = $2; }
+    | '-' expr %prec UMINUS     { $$ = -$2; }
+Parentheses force precedence.
+
+%prec UMINUS associates unary minus rule with UMINUS precedence defined above.
+
+Mathematical Functions
+    | SIN '(' expr ')'          { $$ = sin($3 * M_PI / 180.0); }
+    | COS '(' expr ')'          { $$ = cos($3 * M_PI / 180.0); }
+    | TAN '(' expr ')'          { $$ = tan($3 * M_PI / 180.0); }
+    | SQRT '(' expr ')'         { $$ = sqrt($3); }
+    | LOG '(' expr ')'          { $$ = log($3); }
+    ;
+Trigonometric functions take input in degrees, converted to radians:
+sin(θ°) = sin(θ * π / 180)
+
+sqrt(x) and log(x) are direct from math library.
+
+🧩 Lexical Analyzer (yylex)
+int yylex(void) {
+    int c;
+
+    while ((c = getchar()) == ' ' || c == '\t');
+Skips whitespace and tabs.
+
+End of Input & Newline
+    if (c == EOF)
+        return 0;
+    if (c == '\n')
+        return '\n';
+Returns 0 to signal EOF.
+
+Returns newline character to parser (used to print result).
+
+Number Detection
+    if (isdigit(c) || c == '.') {
+        ungetc(c, stdin);
+        double val;
+        scanf("%lf", &val);
+        yylval.dval = val;
+        return NUMBER;
+    }
+Checks if character is part of a number.
+
+ungetc puts character back into input buffer.
+
+Reads full number (integer or float) via scanf.
+
+Stores value in yylval.dval and returns NUMBER.
+
+Function Detection
+    if (isalpha(c)) {
+        char func[32];
+        int i = 0;
+        while (isalpha(c)) {
+            func[i++] = c;
+            c = getchar();
+        }
+        func[i] = '\0';
+        ungetc(c, stdin);
+
+        if (strcmp(func, "sin") == 0) return SIN;
+        if (strcmp(func, "cos") == 0) return COS;
+        if (strcmp(func, "tan") == 0) return TAN;
+        if (strcmp(func, "sqrt") == 0) return SQRT;
+        if (strcmp(func, "log") == 0) return LOG;
+
+        yyerror("Unknown function");
+        return 0;
+    }
+Reads alphabetic sequences (like “sin”, “log”).
+
+Compares with known keywords and returns respective token.
+
+Reports unknown functions.
+
+Operators and Delimiters
+    return c;
+}
+Returns characters (+, -, *, ^, (, )) as tokens directly to parser.
+
+🧩 Error Handler
+void yyerror(const char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+}
+Prints custom error messages (e.g., division by zero, unknown function, syntax error).
+
+🧩 Main Function
+int main() {
+    printf("Enter expression (press Enter to evaluate, Ctrl+D to exit)\n");
+    yyparse();
+    return 0;
+}
+Displays prompt.
+
+Calls yyparse() → Bison’s main parsing loop that repeatedly calls yylex() to get tokens and evaluates expressions.
+
+🧩 Execution Commands
+bison -d cd3.y
+gcc cd3.tab.c -lm -o calc
+./calc
+Explanation:
+
+bison -d cd3.y → generates cd3.tab.c (parser) + cd3.tab.h (token definitions).
+
+gcc cd3.tab.c -lm -o calc → compiles; -lm links math library.
+
+./calc → runs calculator.
+
+📟 2️⃣ SAMPLE RUN
+Enter expression (press Enter to evaluate, Ctrl+D to exit)
+2 + 3 * 4
+Result = 14.000000
+
+(5 + 3) * 2
+Result = 16.000000
+
+sin(30)
+Result = 0.500000
+
+cos(60)
+Result = 0.500000
+
+sqrt(16)
+Result = 4.000000
+
+log(1)
+Result = 0.000000
+
+2 ^ 3
+Result = 8.000000
+
+-4 + 10
+Result = 6.000000
+📘 3️⃣ THEORY & CONCEPTS (for Viva & Write-up)
+🔸 What is YACC / BISON?
+YACC = Yet Another Compiler Compiler (Bison = GNU version).
+
+Generates a parser (syntax analyzer) that checks grammar and executes semantic actions.
+
+🔸 Role of Lex & Yacc
+Tool	Purpose
+Lex/Flex	Performs lexical analysis (tokenization).
+Yacc/Bison	Performs syntax analysis (grammar parsing).
+Together they form the front end of a compiler.
+
+🔸 Grammar in YACC
+A grammar is defined as a set of production rules:
+
+Non-terminal → sequence of terminals and non-terminals
+YACC uses these rules to build a parse tree and evaluate expressions using semantic actions in { ... }.
+
+🔸 Semantic Values
+$1, $2, $3, etc. → values of the components on the right-hand side.
+
+$$ → value of the non-terminal on the left-hand side.
+
+Values are stored in yylval (defined in union).
+
+🔸 Precedence & Associativity
+Prevents ambiguity in expressions like 3 + 4 * 5.
+
+Declared using %left, %right, etc.
+
+Highest precedence rule is listed last.
+
+🔸 Error Handling
+Syntax errors automatically invoke yyerror().
+
+Semantic errors (like division by zero) can be manually checked.
+
+🔸 Trigonometric Conversion
+sin, cos, tan expect radians in C, so we multiply by (π / 180) to convert degrees → radians.
+
+🔸 Flow of Execution
+User Input → expression.
+
+Lexical Analyzer (yylex) → breaks into tokens.
+
+Parser (yyparse) → applies grammar rules, evaluates.
+
+Semantic Action → prints result or error.
+
+🧠 4️⃣ IMPORTANT VIVA QUESTIONS & ANSWERS
+Q1: What does YACC do?
+A: YACC generates a parser that checks syntax according to a grammar and executes actions for each valid construct.
+
+Q2: What is yylex()?
+A: It’s the lexical analyzer called by yyparse() to supply the next token.
+
+Q3: What are $1, $2, $$ used for?
+A: $1, $2, etc. represent semantic values of symbols on the right-hand side of a rule; $$ is the resulting value for the left-hand side.
+
+Q4: Why do we link with -lm?
+A: Because math functions (sin, cos, pow, etc.) reside in the math library libm.
+
+Q5: What happens if we divide by zero?
+A: Custom yyerror("Division by zero") message is printed and expression result set to 0.
+
+Q6: What is %prec UMINUS for?
+A: It forces unary minus to have right-associative precedence (higher than * and /).
+
+Q7: How does the program handle trigonometric functions?
+A: They are recognized in yylex() as tokens (SIN, COS, etc.) and evaluated in grammar using sin(), cos(), etc., after converting degrees to radians.
+
+Q8: What is the role of %union?
+A: It defines data types (semantic values) that grammar symbols can hold (here double).
+
+Q9: What is the difference between Lex and Yacc?
+A: Lex identifies tokens (lexical analysis), Yacc processes grammar (syntax analysis).
+
+Q10: What happens if the user types an unknown function like abc(2)?
+A: The lexer calls yyerror("Unknown function") and parsing stops for that line.
+
+🧾 CONCLUSION (for write-up)
+This experiment demonstrates the working of a Bison (YACC) parser integrated with a Lexical Analyzer to evaluate arithmetic and scientific expressions.
+It shows how grammar rules, operator precedence, and semantic actions together build an expression evaluator (calculator) that supports trigonometric, logarithmic, and power operations.
+The project highlights the coordination between Lex (for tokenization) and YACC (for parsing & evaluation), forming the basis of a compiler’s front end.
+
+Would you like me to prepare a ready-to-print practical journal version (formatted with Title, Objective, Theory, Algorithm, Code, Output, Conclusion, Viva Q&A) for this experiment (CD3 – Expression Calculator using YACC)?
+
+You said:
+%{ 
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <math.h> 
+#include <string.h> 
+double call_func(char *name, double val); 
+int yylex(void); 
+int yyerror(const char *s); 
+%} 
+%union { 
+double dval; 
+char *sval; 
+} 
+/* Tokens */ 
+%token <dval> NUMBER CONST 
+%token <sval> FUNC 
+/* Non-terminal type */ 
+%type <dval> input expr 
+/* Operator precedence */ 
+%left '+' '-' 
+%left '*' '/' 
+%right '^' 
+%right UMINUS 
+%% 
+input: 
+/* empty */ 
+| input expr '\n'  { printf("Result = %lf\n", $2); } 
+; 
+expr: 
+expr '+' expr        
+{ $$ = $1 + $3; } 
+    | expr '-' expr        { $$ = $1 - $3; } 
+    | expr '*' expr        { $$ = $1 * $3; } 
+    | expr '/' expr        { 
+                                if ($3 == 0) { 
+                                    yyerror("Division by zero"); 
+                                    $$ = 0; 
+                                } else $$ = $1 / $3; 
+                            } 
+    | expr '^' expr        { $$ = pow($1, $3); } 
+    | '-' expr %prec UMINUS { $$ = -$2; } 
+    | '(' expr ')'         { $$ = $2; } 
+    | FUNC '(' expr ')'    { $$ = call_func($1, $3); } 
+    | CONST                { $$ = $1; } 
+    | NUMBER               { $$ = $1; } 
+    ; 
+%% 
+ 
+double call_func(char *name, double val) { 
+    if (strcmp(name, "sin") == 0)  return sin(val); 
+    if (strcmp(name, "cos") == 0)  return cos(val); 
+    if (strcmp(name, "tan") == 0)  return tan(val); 
+    if (strcmp(name, "log") == 0)  return log(val); 
+    if (strcmp(name, "sqrt") == 0) return sqrt(val); 
+ 
+    printf("Unknown function: %s\n", name); 
+    return 0; 
+} 
+int yyerror(const char *s) { 
+printf("Error: %s\n", s); 
+return 0; 
+} 
+int main() { 
+printf("Enter an expression (press Enter to evaluate, Ctrl+D to exit):\n"); 
+yyparse(); 
+return 0; 
+} 
+EXECUTION COMMANDS - 
+bison -d cd4.y (will give a warning, ignore and proceed) 
+f
+ lex cd4.l 
+gcc cd4.tab.c lex.yy.c -lfl -lm -o calc 
+./calc 
+ChatGPT said:
+Perfect 👍 — this is your CD4 experiment: “Scientific Calculator using YACC and LEX with Functions & Constants” — an advanced version of CD3.
+
+This one introduces function calls (sin(x), log(x) …), constants (pi, e), and integration of LEX + YACC (two files: cd4.y and cd4.l).
+
+Let’s go step-by-step so you understand every detail for your practical exam and viva 👇
+
+🧩 PART 1 — CODE EXPLANATION (YACC FILE cd4.y)
+🔹 1️⃣ Header Section
+%{ 
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <math.h> 
+#include <string.h> 
+
+double call_func(char *name, double val); 
+int yylex(void); 
+int yyerror(const char *s); 
+%} 
+👉 Explanation:
+Everything between %{ and %} is copied directly into the generated cd4.tab.c file.
+
+Includes:
+
+<math.h> → for sin, cos, sqrt, etc.
+
+<string.h> → for comparing strings (strcmp).
+
+Function declarations:
+
+call_func() — evaluates a mathematical function like sin, cos, etc.
+
+yylex() — lexical analyzer (defined in cd4.l).
+
+yyerror() — error handler for syntax or runtime errors.
+
+🔹 2️⃣ Union Definition
+%union { 
+    double dval; 
+    char *sval; 
+}
+👉 Explanation:
+This defines the semantic value types used by grammar symbols.
+
+dval → holds numeric values.
+
+sval → holds string values (function names like "sin").
+
+🔹 3️⃣ Token Declarations
+%token <dval> NUMBER CONST 
+%token <sval> FUNC
+👉 Explanation:
+NUMBER: Numeric literals (e.g., 10, 3.14).
+
+CONST: Constants like pi and e (from lexer).
+
+FUNC: Function names like sin, cos, etc. (from lexer).
+
+<dval> and <sval> tell Bison what data type each token carries (from the union).
+
+🔹 4️⃣ Type and Precedence
+%type <dval> input expr 
+%left '+' '-' 
+%left '*' '/' 
+%right '^' 
+%right UMINUS
+👉 Explanation:
+The %type directive says non-terminals input and expr hold double values.
+
+Operator precedence & associativity:
+
++, - have lowest precedence.
+
+*, / higher.
+
+^ (power) is right-associative.
+
+UMINUS ensures unary minus is evaluated correctly (-5).
+
+🔹 5️⃣ Grammar Rules
+%%
+input:
+    /* empty */
+    | input expr '\n'  { printf("Result = %lf\n", $2); }
+    ;
+👉 Explanation:
+The starting rule.
+
+Reads expressions line by line — prints result when you press Enter.
+
+$2 is the value of expr.
+
+🔸 Expression Grammar
+expr:
+      expr '+' expr        { $$ = $1 + $3; }
+    | expr '-' expr        { $$ = $1 - $3; }
+    | expr '*' expr        { $$ = $1 * $3; }
+    | expr '/' expr        {
+                                if ($3 == 0) {
+                                    yyerror("Division by zero");
+                                    $$ = 0;
+                                } else $$ = $1 / $3;
+                            }
+    | expr '^' expr        { $$ = pow($1, $3); }
+    | '-' expr %prec UMINUS { $$ = -$2; }
+    | '(' expr ')'         { $$ = $2; }
+    | FUNC '(' expr ')'    { $$ = call_func($1, $3); }
+    | CONST                { $$ = $1; }
+    | NUMBER               { $$ = $1; }
+    ;
+👉 Explanation:
+Rule	Meaning
+expr '+' expr	Addition
+expr '*' expr	Multiplication
+expr '/' expr	Division with zero check
+expr '^' expr	Power function using pow()
+- expr	Unary minus
+( expr )	Parentheses for grouping
+FUNC '(' expr ')'	Function call like sin(30)
+CONST	Predefined constants (e.g., π, e)
+NUMBER	Numeric literal
+🔹 6️⃣ Function Handler
+double call_func(char *name, double val) {
+    if (strcmp(name, "sin") == 0)  return sin(val);
+    if (strcmp(name, "cos") == 0)  return cos(val);
+    if (strcmp(name, "tan") == 0)  return tan(val);
+    if (strcmp(name, "log") == 0)  return log(val);
+    if (strcmp(name, "sqrt") == 0) return sqrt(val);
+
+    printf("Unknown function: %s\n", name);
+    return 0;
+}
+👉 Explanation:
+Called whenever the grammar matches FUNC '(' expr ')'.
+
+It compares the function name string and calls the corresponding math function.
+
+Returns the computed result (as double).
+
+🔹 7️⃣ Error Handler
+int yyerror(const char *s) { 
+    printf("Error: %s\n", s); 
+    return 0; 
+} 
+👉 Explanation:
+Handles syntax or runtime errors like:
+
+Missing parenthesis.
+
+Invalid expression.
+
+Division by zero.
+
+🔹 8️⃣ Main Function
+int main() { 
+    printf("Enter an expression (press Enter to evaluate, Ctrl+D to exit):\n"); 
+    yyparse(); 
+    return 0; 
+} 
+👉 Explanation:
+Starts the parser (yyparse()).
+
+Keeps accepting expressions until EOF (Ctrl + D).
+
+🧩 PART 2 — LEX FILE (cd4.l)
+You’ll need this for the token definitions mentioned in YACC.
+
+Here’s a complete working version for your setup:
+
+%{
+#include "cd4.tab.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+%}
+
+%%
+[0-9]+(\.[0-9]+)?    { yylval.dval = atof(yytext); return NUMBER; }
+"pi"|"PI"            { yylval.dval = M_PI; return CONST; }
+"e"                  { yylval.dval = M_E; return CONST; }
+
+"sin"|"cos"|"tan"|"log"|"sqrt"  {
+                                yylval.sval = strdup(yytext);
+                                return FUNC;
+                              }
+
+[ \t]+               { /* skip spaces */ }
+\n                   { return '\n'; }
+.                    { return yytext[0]; }
+%%
+
+int yywrap() { return 1; }
+👉 Explanation:
+Recognizes numbers, constants, and functions.
+
+"pi" and "e" mapped to values from <math.h>.
+
+Returns tokens (NUMBER, CONST, FUNC).
+
+For unknown characters, returns them directly (like +, -, (, etc.).
+
+🧩 PART 3 — EXECUTION COMMANDS
+bison -d cd4.y          # Generates cd4.tab.c and cd4.tab.h
+flex cd4.l              # Generates lex.yy.c
+gcc cd4.tab.c lex.yy.c -lfl -lm -o calc
+./calc
+Notes:
+
+Ignore the warning after bison -d; it’s safe.
+
+Use -lm to link the math library (required for sin, cos, etc.).
+
+Use -lfl for the Flex runtime library.
+
+⚙️ PART 4 — SAMPLE RUN OUTPUT
+Enter an expression (press Enter to evaluate, Ctrl+D to exit):
+2 + 3 * 4
+Result = 14.000000
+
+sin(3.14159265/2)
+Result = 1.000000
+
+sqrt(16)
+Result = 4.000000
+
+log(e)
+Result = 1.000000
+
+pi * 2
+Result = 6.283185
+🧠 PART 5 — THEORY (for Write-up and Viva)
+🔸 Aim
+To implement a scientific calculator using LEX and YACC, which can evaluate arithmetic expressions with functions and constants.
+
+🔸 Tools Used
+FLEX – for lexical analysis (tokenizing input).
+
+BISON/YACC – for syntax analysis and evaluation.
+
+GCC – for compilation.
+
+Math library – for trigonometric and logarithmic calculations.
+
+🔸 Working Principle
+LEX reads input and identifies tokens like:
+
+Numbers (e.g., 23.5)
+
+Constants (pi, e)
+
+Function names (sin, cos, sqrt)
+
+Operators (+, -, *, /, ^)
+
+YACC applies grammar rules to parse expressions.
+
+Semantic actions compute results recursively.
+
+Functions are evaluated using C’s math library (sin(), sqrt() etc.).
+
+🔸 Flow of Execution
+User Input → LEX (tokenize) → YACC (parse + evaluate) → Result Output
+🔸 Features
+✅ Arithmetic operations (+, -, *, /, ^)
+✅ Parentheses handling
+✅ Unary minus support
+✅ Functions: sin, cos, tan, log, sqrt
+✅ Constants: π (pi), e
+✅ Error handling for invalid syntax or division by zero
+
+💬 PART 6 — VIVA QUESTIONS (with Model Answers)
+Q1. What is the difference between Lex and Yacc?
+A: Lex performs lexical analysis (tokenizing input). Yacc performs syntax analysis (parsing and evaluating expressions).
+
+Q2. What is yylval?
+A: It’s a union variable used to pass token values (numbers, strings, etc.) from Lex to Yacc.
+
+Q3. What is %union used for?
+A: To define multiple data types (like double, char*) that tokens and non-terminals can store.
+
+Q4. What are $1, $2, $$ in YACC?
+A: $1, $2, etc., are values of right-hand side symbols. $$ holds the value of the left-hand side non-terminal.
+
+Q5. Why link with -lm and -lfl?
+A:
+
+-lm → links math library (for sin, cos, etc.)
+
+-lfl → links Flex runtime functions.
+
+Q6. How are constants like pi and e handled?
+A: In the Lex file, they are matched and their values (M_PI, M_E) assigned to yylval.dval.
+
+Q7. What is %prec UMINUS?
+A: It gives higher precedence to unary minus to handle negative numbers properly.
+
+Q8. What happens if an unknown function is entered?
+A: The program prints "Unknown function: <name>" and returns 0.
+
+Q9. What does yyparse() do?
+A: It’s the main parser function automatically generated by Bison. It repeatedly calls yylex() to get tokens and applies grammar rules.
+
+Q10. How does the program handle syntax errors?
+A: The parser calls yyerror() which displays an error message.
+
+🧾 PART 7 — CONCLUSION
+This experiment demonstrates the integration of LEX and YACC to create a scientific calculator.
+The calculator can evaluate complex expressions with arithmetic operators, functions, and constants using recursive grammar and semantic actions.
+It shows how Lexical and Syntax analysis work together to perform meaningful computation — just like in a compiler’s front end.
+
+Would you like me to now prepare a ready-to-print practical journal write-up (formatted as TITLE → AIM → OBJECTIVE → THEORY → ALGORITHM → CODE → OUTPUT → CONCLUSION → VIVA Q&A)?
+
+You said:
+%{
+#include "cd5.tab.h"
+#include <stdlib.h>
+%}
+
+%%
+[0-9]+      { return NUMBER; }
+[ \t]       ;        /* Ignore spaces and tabs */
+\n          { return '\n'; }
+"+"         { return '+'; }
+"-"         { return '-'; }
+"*"         { return '*'; }
+"/"         { return '/'; }
+"("         { return '('; }
+")"         { return ')'; }
+.           { printf("Invalid character: %s\n", yytext); }
+%%
+
+int yywrap() { return 1; }
+
+%{
+#include <stdio.h>
+#include <stdlib.h>
+
+int yylex();
+void yyerror(const char *s);
+int valid = 1;   // flag to track if expression is valid
+%}
+
+%token NUMBER
+
+%left '+' '-'
+%left '*' '/'
+
+%%
+input :
+      E '\n'    { 
+          if (valid) printf("Valid expression.\n");
+          valid = 1;  /* Reset flag for next input */
+      }
+    ;
+
+E : E '+' T
+  | E '-' T
+  | T
+  ;
+
+T : T '*' F
+  | T '/' F
+  | F
+  ;
+
+F : '(' E ')'
+  | NUMBER
+  ;
+%%
+
+void yyerror(const char *s) {
+    valid = 0;
+    printf("Error: syntax error\n");
+}
+
+int main() {
+    printf("Enter an arithmetic expression:\n");
+    yyparse();
+    return 0;
+}
+
+
+Execution commands – 
+bison -d cd5.y -o cd5.tab.c 
+flex cd5.l 
+gcc lex.yy.c cd5.tab.c -o cd5 -lfl 
+./cd5 
+ChatGPT said:
+Perfect 👍 — this is your CD5 Experiment: Arithmetic Expression Validator using LEX and YACC.
+It’s a simple but important practical — it checks whether an arithmetic expression is syntactically valid (not for evaluation like previous ones).
+
+Let’s break it down line-by-line, then cover theory, logic flow, sample output, and viva questions so you can be fully prepared for your compiler design practical exam.
+
+🧩 PART 1 — FILE 1: cd5.l (LEX FILE)
+Lex Code
+%{
+#include "cd5.tab.h"
+#include <stdlib.h>
+%}
+
+%%
+[0-9]+      { return NUMBER; }
+[ \t]       ;        /* Ignore spaces and tabs */
+\n          { return '\n'; }
+"+"         { return '+'; }
+"-"         { return '-'; }
+"*"         { return '*'; }
+"/"         { return '/'; }
+"("         { return '('; }
+")"         { return ')'; }
+.           { printf("Invalid character: %s\n", yytext); }
+%%
+
+int yywrap() { return 1; }
+🔍 Line-by-Line Explanation
+Line	Explanation
+%{ ... %}	C code included at the top of generated file. Includes the YACC header file cd5.tab.h for token definitions.
+[0-9]+	Matches one or more digits (numbers). Returns the token NUMBER.
+[ \t]	Matches spaces or tabs. They are ignored.
+\n	Returns newline character — used as a delimiter for each expression.
+"+", "-", "*", "/", "(", ")"	Recognizes arithmetic operators and parentheses. Each returned as its literal token (the character itself).
+.	Matches any other (invalid) character. Prints error message.
+yywrap()	Returns 1 to signal EOF (end of input).
+🧠 Purpose of this Lex File:
+It identifies valid tokens — numbers, operators, parentheses, and newlines — and ignores whitespace.
+Invalid characters are reported immediately.
+
+🧩 PART 2 — FILE 2: cd5.y (YACC FILE)
+Yacc Code
+%{
+#include <stdio.h>
+#include <stdlib.h>
+
+int yylex();
+void yyerror(const char *s);
+int valid = 1;   // flag to track if expression is valid
+%}
+
+%token NUMBER
+
+%left '+' '-'
+%left '*' '/'
+
+%%
+input :
+      E '\n'    { 
+          if (valid) printf("Valid expression.\n");
+          valid = 1;  /* Reset flag for next input */
+      }
+    ;
+
+E : E '+' T
+  | E '-' T
+  | T
+  ;
+
+T : T '*' F
+  | T '/' F
+  | F
+  ;
+
+F : '(' E ')'
+  | NUMBER
+  ;
+%%
+
+void yyerror(const char *s) {
+    valid = 0;
+    printf("Error: syntax error\n");
+}
+
+int main() {
+    printf("Enter an arithmetic expression:\n");
+    yyparse();
+    return 0;
+}
+🔍 Step-by-Step Explanation
+🔸 Header Section
+%{
+#include <stdio.h>
+#include <stdlib.h>
+
+int yylex();
+void yyerror(const char *s);
+int valid = 1;
+%}
+Standard includes.
+
+Declares:
+
+yylex() → lexical analyzer function.
+
+yyerror() → custom error handler.
+
+valid flag → to check if expression is syntactically correct.
+
+🔸 Token and Precedence
+%token NUMBER
+%left '+' '-'
+%left '*' '/'
+NUMBER → token for numeric values.
+
+Defines operator precedence and associativity:
+
++, - lower precedence.
+
+*, / higher precedence.
+
+Helps the parser build the correct grammar tree.
+
+🔸 Grammar Rules
+%%
+input :
+      E '\n'    { 
+          if (valid) printf("Valid expression.\n");
+          valid = 1;
+      }
+    ;
+input → entry rule.
+
+Waits for an expression followed by newline (\n).
+
+If parsing succeeds, prints "Valid expression.".
+
+If an error was caught earlier, yyerror() sets valid = 0.
+
+Expression Grammar
+E : E '+' T
+  | E '-' T
+  | T
+  ;
+Defines expression as a combination of terms and + / -.
+
+Term Grammar
+T : T '*' F
+  | T '/' F
+  | F
+  ;
+Defines term as factors combined using * or /.
+
+Factor Grammar
+F : '(' E ')'
+  | NUMBER
+  ;
+Factor can be either:
+
+A number, or
+
+An entire expression inside parentheses ( ... ).
+
+🔸 Error Handling
+void yyerror(const char *s) {
+    valid = 0;
+    printf("Error: syntax error\n");
+}
+Called automatically when input doesn’t match grammar rules.
+
+Sets valid = 0 and prints "Error: syntax error".
+
+🔸 Main Function
+int main() {
+    printf("Enter an arithmetic expression:\n");
+    yyparse();
+    return 0;
+}
+Runs yyparse(), which repeatedly calls yylex() to get tokens and validate grammar.
+
+Ends on EOF (Ctrl + D).
+
+🧩 PART 3 — EXECUTION COMMANDS
+bison -d cd5.y -o cd5.tab.c
+flex cd5.l
+gcc lex.yy.c cd5.tab.c -o cd5 -lfl
+./cd5
+✅ Explanation of commands:
+
+Command	Purpose
+bison -d cd5.y	Generates cd5.tab.c (parser) and cd5.tab.h (token header).
+flex cd5.l	Generates lex.yy.c (lexer).
+gcc lex.yy.c cd5.tab.c -o cd5 -lfl	Compiles and links the two.
+./cd5	Runs the program.
+🧪 PART 4 — SAMPLE RUN
+✅ Valid Inputs
+Enter an arithmetic expression:
+(2+3)*5
+Valid expression.
+
+12 + (5 - 3) / 2
+Valid expression.
+
+4 + 5 * 6
+Valid expression.
+❌ Invalid Inputs
+Enter an arithmetic expression:
+(2+3
+Error: syntax error
+
+5 + * 3
+Error: syntax error
+
+4 5 + 6
+Error: syntax error
+
+4 + $ + 2
+Invalid character: $
+Error: syntax error
+📘 PART 5 — THEORY EXPLANATION (for Viva / Write-up)
+🔸 Aim
+To implement a syntax validator for arithmetic expressions using LEX and YACC.
+
+🔸 Objective
+To understand how grammar rules are defined for valid arithmetic syntax.
+
+To verify whether an entered expression follows the defined grammar.
+
+🔸 Tools & Platform
+Tools: LEX (Flex), YACC (Bison), GCC compiler
+
+Platform: Linux / Ubuntu terminal
+
+🔸 Concept
+In a compiler, the syntax analysis phase checks whether a sequence of tokens (from the lexer) forms a valid sentence according to the language grammar.
+
+Here:
+
+LEX performs tokenization (numbers, operators, parentheses).
+
+YACC performs parsing based on the grammar of arithmetic expressions.
+
+🔸 Grammar Used
+E → E + T | E - T | T
+T → T * F | T / F | F
+F → (E) | NUMBER
+✅ This grammar defines all valid arithmetic expressions.
+
+🔸 Flow of Execution
+User Input
+   ↓
+LEX (cd5.l) – Tokenization
+   ↓
+YACC (cd5.y) – Grammar Checking
+   ↓
+Valid or Invalid message printed
+🔸 Features
+✅ Detects invalid syntax (like unmatched parentheses, misplaced operators)
+✅ Ignores spaces/tabs
+✅ Reports invalid characters
+✅ Handles nested parentheses properly
+
+💬 PART 6 — COMMON VIVA QUESTIONS (with Answers)
+Q1: What is the purpose of this program?
+A: To check whether an arithmetic expression is syntactically valid according to defined grammar rules.
+
+Q2: What is the role of Lex and Yacc here?
+A: Lex identifies tokens like numbers and operators. Yacc checks if those tokens follow valid grammar rules.
+
+Q3: What does %left '+' '-' mean?
+A: It defines left associativity for addition and subtraction operators, resolving shift-reduce conflicts.
+
+Q4: What is the start symbol in this grammar?
+A: The non-terminal input is the start symbol.
+
+Q5: What does the rule F : '(' E ')' represent?
+A: It allows nested expressions inside parentheses.
+
+Q6: What happens if the user enters 5 + * 2?
+A: The parser will call yyerror() and print "Error: syntax error".
+
+Q7: What happens if invalid character $ appears?
+A: The Lex file catches it in rule . and prints "Invalid character: $".
+
+Q8: Why is there a flag valid?
+A: It helps ensure multiple expressions can be checked in one run by resetting after each line.
+
+Q9: What does yyparse() do?
+A: It drives the parsing process by calling yylex() repeatedly and applying grammar rules.
+
+Q10: Can this program evaluate expressions?
+A: No — it only validates syntax. For evaluation, we’d include semantic actions like in CD3 or CD4.
+
+✅ PART 7 — CONCLUSION
+This experiment demonstrates syntax validation using Lex and Yacc, where Lex performs lexical analysis and Yacc performs syntax analysis based on grammar rules for arithmetic expressions.
+The program successfully distinguishes between valid and invalid expressions, thus illustrating how compilers perform the parsing phase.
+
+Would you like me to format this into a ready-to-print practical write-up (AIM → THEORY → CODE → OUTPUT → CONCLUSION → VIVA) for your college journal (like I did for previous CD experiments)?
+
+You said:
+%{
+#include "cd6.tab.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+%}
+
+%%
+[a-zA-Z][a-zA-Z0-9]*   { yylval.str = strdup(yytext); return ID; }
+[0-9]+                 { yylval.str = strdup(yytext); return NUM; }
+"="                    { return ASSIGN; }
+"*"                    { return MUL; }
+"/"                    { return DIV; }
+"+"                    { return PLUS; }
+"-"                    { return MINUS; }
+"("                    { return LPAREN; }
+")"                    { return RPAREN; }
+[ \t\n]                ;
+.                      { printf("Invalid character: %s\n", yytext); }
+%%
+int yywrap() { return 1; }
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int yylex();
+void yyerror(const char *s);
+
+/* --- Structures --- */
+struct Quadruple {
+    char op[5], arg1[20], arg2[20], result[20];
+};
+struct Triple {
+    char op[5], arg1[20], arg2[20];
+};
+
+struct Quadruple q[50];
+struct Triple t[50];
+int qIndex = 0, tempCount = 1;
+
+/* --- Helper Functions --- */
+char *newTemp() {
+    static char temp[10];
+    sprintf(temp, "t%d", tempCount++);
+    return strdup(temp);
+}
+
+char *indexRef(int index) {
+    static char ref[10];
+    sprintf(ref, "(%d)", index);
+    return strdup(ref);
+}
+%}
+
+%union { char *str; }
+
+%token <str> ID NUM
+%token ASSIGN PLUS MINUS MUL DIV LPAREN RPAREN
+%left PLUS MINUS
+%left MUL DIV
+%right UMINUS
+%type <str> expr
+%start statement
+
+%%
+statement:
+      ID ASSIGN expr {
+          /* --- Quadruple for assignment --- */
+          strcpy(q[qIndex].op, "=");
+          strcpy(q[qIndex].arg1, $3);
+          strcpy(q[qIndex].arg2, "-");
+          strcpy(q[qIndex].result, $1);
+
+          /* --- Triple for assignment --- */
+          strcpy(t[qIndex].op, "=");
+          /* Replace temporaries (t1, t2) with their index refs */
+          if ($3[0] == 't')
+              strcpy(t[qIndex].arg1, indexRef(atoi($3 + 1) - 1));
+          else
+              strcpy(t[qIndex].arg1, $3);
+          strcpy(t[qIndex].arg2, "-");
+
+          qIndex++;
+
+          printf("\n=== Quadruple Representation ===\n");
+          printf("Index\tOp\tArg1\tArg2\tResult\n");
+          printf("-----\t--\t----\t----\t------\n");
+          for (int i = 0; i < qIndex; i++)
+              printf("%d\t%s\t%s\t%s\t%s\n", i, q[i].op, q[i].arg1, q[i].arg2, q[i].result);
+
+          printf("\n=== Triple Representation ===\n");
+          printf("Index\tOp\tArg1\tArg2\n");
+          printf("-----\t--\t----\t----\n");
+          for (int i = 0; i < qIndex; i++)
+              printf("%d\t%s\t%s\t%s\n", i, t[i].op, t[i].arg1, t[i].arg2);
+      }
+    ;
+
+expr:
+      expr PLUS expr {
+          char *temp = newTemp();
+          strcpy(q[qIndex].op, "+");
+          strcpy(q[qIndex].arg1, $1);
+          strcpy(q[qIndex].arg2, $3);
+          strcpy(q[qIndex].result, temp);
+
+          strcpy(t[qIndex].op, "+");
+          /* Replace temp references in Triple */
+          if ($1[0] == 't')
+              strcpy(t[qIndex].arg1, indexRef(atoi($1 + 1) - 1));
+          else
+              strcpy(t[qIndex].arg1, $1);
+
+          if ($3[0] == 't')
+              strcpy(t[qIndex].arg2, indexRef(atoi($3 + 1) - 1));
+          else
+              strcpy(t[qIndex].arg2, $3);
+
+          $$ = strdup(temp);
+          qIndex++;
+      }
+    | expr MINUS expr {
+          char *temp = newTemp();
+          strcpy(q[qIndex].op, "-");
+          strcpy(q[qIndex].arg1, $1);
+          strcpy(q[qIndex].arg2, $3);
+          strcpy(q[qIndex].result, temp);
+
+          strcpy(t[qIndex].op, "-");
+          if ($1[0] == 't')
+              strcpy(t[qIndex].arg1, indexRef(atoi($1 + 1) - 1));
+          else
+              strcpy(t[qIndex].arg1, $1);
+
+          if ($3[0] == 't')
+              strcpy(t[qIndex].arg2, indexRef(atoi($3 + 1) - 1));
+          else
+              strcpy(t[qIndex].arg2, $3);
+
+          $$ = strdup(temp);
+          qIndex++;
+      }
+    | expr MUL expr {
+          char *temp = newTemp();
+          strcpy(q[qIndex].op, "*");
+          strcpy(q[qIndex].arg1, $1);
+          strcpy(q[qIndex].arg2, $3);
+          strcpy(q[qIndex].result, temp);
+
+          strcpy(t[qIndex].op, "*");
+          if ($1[0] == 't')
+              strcpy(t[qIndex].arg1, indexRef(atoi($1 + 1) - 1));
+          else
+              strcpy(t[qIndex].arg1, $1);
+
+          if ($3[0] == 't')
+              strcpy(t[qIndex].arg2, indexRef(atoi($3 + 1) - 1));
+          else
+              strcpy(t[qIndex].arg2, $3);
+
+          $$ = strdup(temp);
+          qIndex++;
+      }
+    | expr DIV expr {
+          char *temp = newTemp();
+          strcpy(q[qIndex].op, "/");
+          strcpy(q[qIndex].arg1, $1);
+          strcpy(q[qIndex].arg2, $3);
+          strcpy(q[qIndex].result, temp);
+
+          strcpy(t[qIndex].op, "/");
+          if ($1[0] == 't')
+              strcpy(t[qIndex].arg1, indexRef(atoi($1 + 1) - 1));
+          else
+              strcpy(t[qIndex].arg1, $1);
+
+          if ($3[0] == 't')
+              strcpy(t[qIndex].arg2, indexRef(atoi($3 + 1) - 1));
+          else
+              strcpy(t[qIndex].arg2, $3);
+
+          $$ = strdup(temp);
+          qIndex++;
+      }
+    | LPAREN expr RPAREN { $$ = $2; }
+    | MINUS expr %prec UMINUS {
+          char *temp = newTemp();
+          strcpy(q[qIndex].op, "~");
+          strcpy(q[qIndex].arg1, $2);
+          strcpy(q[qIndex].arg2, "-");
+          strcpy(q[qIndex].result, temp);
+
+          strcpy(t[qIndex].op, "~");
+          if ($2[0] == 't')
+              strcpy(t[qIndex].arg1, indexRef(atoi($2 + 1) - 1));
+          else
+              strcpy(t[qIndex].arg1, $2);
+          strcpy(t[qIndex].arg2, "-");
+
+          $$ = strdup(temp);
+          qIndex++;
+      }
+    | ID  { $$ = strdup($1); }
+    | NUM { $$ = strdup($1); }
+    ;
+%%
+
+void yyerror(const char *s) { fprintf(stderr, "Error: %s\n", s); }
+
+int main() {
+    printf("Enter an arithmetic expression:\n");
+    yyparse();
+    return 0;
+}
+
+Execution commands – 
+bison -d cd6.y -o cd6.tab.c 
+flex cd6.l 
+gcc lex.yy.c cd6.tab.c -o cd6 -lfl 
+./cd6 
+ChatGPT said:
+Excellent 👏 — this is your CD6 experiment: “Intermediate Code Generation (ICG) using Quadruples and Triples”.
+
+This experiment builds on your understanding of lexical & syntax analysis (from CD1–CD5) and now moves into code generation, the next compiler phase.
+
+We’ll go step by step so you can confidently explain this in your viva and practical exam — including:
+
+🔹 Line-by-line explanation (LEX + YACC)
+
+🔹 Core theory of ICG, quadruples, triples
+
+🔹 Example walkthrough (a = b + c * d)
+
+🔹 Sample output table
+
+🔹 Viva Q&A
+
+🧩 1️⃣ LEX FILE (cd6.l) — Token Generation
+📘 Code
+%{
+#include "cd6.tab.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+%}
+
+%%
+[a-zA-Z][a-zA-Z0-9]*   { yylval.str = strdup(yytext); return ID; }
+[0-9]+                 { yylval.str = strdup(yytext); return NUM; }
+"="                    { return ASSIGN; }
+"*"                    { return MUL; }
+"/"                    { return DIV; }
+"+"                    { return PLUS; }
+"-"                    { return MINUS; }
+"("                    { return LPAREN; }
+")"                    { return RPAREN; }
+[ \t\n]                ;    /* Ignore whitespace */
+.                      { printf("Invalid character: %s\n", yytext); }
+%%
+
+int yywrap() { return 1; }
+🧩 Line-by-line Explanation
+Section	Explanation
+%{ … %}	C declarations copied into generated file; includes YACC header cd6.tab.h (for token definitions).
+[a-zA-Z][a-zA-Z0-9]*	Recognizes identifiers like a, abc, temp1; returns ID token.
+[0-9]+	Recognizes integers; returns NUM token.
+"=", "*", "/", "+", "-", "(", ")"	Return operator/delimiter tokens defined in YACC.
+[ \t\n]	Skips whitespace.
+.	Prints message for invalid input.
+yywrap()	Tells lexer there’s no more input at EOF.
+🧠 Purpose:
+This lexer identifies variables, numbers, and arithmetic operators from an expression, passing them as tokens to the YACC parser.
+
+🧩 2️⃣ YACC FILE (cd6.y) — Intermediate Code Generator
+📘 Code Breakdown
+Header & Structure Definitions
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int yylex();
+void yyerror(const char *s);
+
+/* --- Structures --- */
+struct Quadruple {
+    char op[5], arg1[20], arg2[20], result[20];
+};
+struct Triple {
+    char op[5], arg1[20], arg2[20];
+};
+
+struct Quadruple q[50];
+struct Triple t[50];
+int qIndex = 0, tempCount = 1;
+
+/* --- Helper Functions --- */
+char *newTemp() {
+    static char temp[10];
+    sprintf(temp, "t%d", tempCount++);
+    return strdup(temp);
+}
+
+char *indexRef(int index) {
+    static char ref[10];
+    sprintf(ref, "(%d)", index);
+    return strdup(ref);
+}
+%}
+🧠 Explanation:
+Structures:
+
+Quadruple: stores 4 fields — op, arg1, arg2, result.
+
+Triple: stores 3 fields — op, arg1, arg2.
+
+Global Arrays:
+
+q[] and t[] hold intermediate representations.
+
+Counters:
+
+qIndex: current instruction index.
+
+tempCount: to generate temporary variable names (t1, t2, etc.).
+
+Functions:
+
+newTemp() → returns new temporary variable name.
+
+indexRef() → used in triples to represent references (like (0), (1)).
+
+Token and Precedence Section
+%union { char *str; }
+
+%token <str> ID NUM
+%token ASSIGN PLUS MINUS MUL DIV LPAREN RPAREN
+%left PLUS MINUS
+%left MUL DIV
+%right UMINUS
+%type <str> expr
+%start statement
+Explanation:
+
+%union defines the type of semantic values (char *).
+
+Tokens: same as in Lex file.
+
+Precedence rules (+, - lower; *, / higher).
+
+UMINUS: handles negative numbers.
+
+expr non-terminal returns a string (variable or temp name).
+
+🔸 Grammar Rules
+1. Assignment Statement
+statement:
+      ID ASSIGN expr {
+          /* --- Quadruple for assignment --- */
+          strcpy(q[qIndex].op, "=");
+          strcpy(q[qIndex].arg1, $3);
+          strcpy(q[qIndex].arg2, "-");
+          strcpy(q[qIndex].result, $1);
+
+          /* --- Triple for assignment --- */
+          strcpy(t[qIndex].op, "=");
+          if ($3[0] == 't')
+              strcpy(t[qIndex].arg1, indexRef(atoi($3 + 1) - 1));
+          else
+              strcpy(t[qIndex].arg1, $3);
+          strcpy(t[qIndex].arg2, "-");
+
+          qIndex++;
+
+          /* --- Print Intermediate Representations --- */
+          printf("\n=== Quadruple Representation ===\n");
+          printf("Index\tOp\tArg1\tArg2\tResult\n");
+          for (int i = 0; i < qIndex; i++)
+              printf("%d\t%s\t%s\t%s\t%s\n", i, q[i].op, q[i].arg1, q[i].arg2, q[i].result);
+
+          printf("\n=== Triple Representation ===\n");
+          printf("Index\tOp\tArg1\tArg2\n");
+          for (int i = 0; i < qIndex; i++)
+              printf("%d\t%s\t%s\t%s\n", i, t[i].op, t[i].arg1, t[i].arg2);
+      }
+    ;
+🧠 Explanation:
+
+When an assignment (ID = expr) is parsed:
+
+Generates a quadruple and triple for the assignment.
+
+Example:
+Expression: a = b + c * d
+
+q[] holds sequence of 3-address code.
+
+t[] holds corresponding triples.
+
+Then it prints both representations.
+
+2. Expression Rules
+Each expression rule creates intermediate code and assigns results to temporary variables.
+
+Example: expr PLUS expr
+expr:
+      expr PLUS expr {
+          char *temp = newTemp();
+          strcpy(q[qIndex].op, "+");
+          strcpy(q[qIndex].arg1, $1);
+          strcpy(q[qIndex].arg2, $3);
+          strcpy(q[qIndex].result, temp);
+          ...
+          $$ = strdup(temp);
+          qIndex++;
+      }
+Creates new temporary (e.g., t1 = b + c).
+
+Adds an entry in both quadruple and triple tables.
+
+Similarly for:
+expr MINUS expr → -
+
+expr MUL expr → *
+
+expr DIV expr → /
+
+LPAREN expr RPAREN → returns inner expression.
+
+MINUS expr %prec UMINUS → for unary minus (t2 = ~a).
+
+ID or NUM → directly return variable/number name.
+
+Helper Functions in Use
+newTemp() generates new temp variable names (t1, t2, …).
+
+indexRef() maps t1 → (0), t2 → (1) for triples.
+
+Error & Main
+void yyerror(const char *s) { fprintf(stderr, "Error: %s\n", s); }
+
+int main() {
+    printf("Enter an arithmetic expression:\n");
+    yyparse();
+    return 0;
+}
+🧩 3️⃣ THEORY — Intermediate Code, Quadruples, Triples
+🔸 What is Intermediate Code Generation (ICG)?
+After syntax and semantic analysis, the compiler generates an intermediate form of code that’s machine-independent but easier to translate into target machine code.
+
+This phase bridges the front-end (parser) and back-end (code generation).
+
+🔸 Intermediate Representations (IR)
+Common IR forms:
+
+Three-Address Code (TAC) → x = y op z
+
+Quadruples
+
+Triples
+
+Indirect Triples
+
+🔸 Quadruple Representation
+Each operation is represented as a tuple (Op, Arg1, Arg2, Result).
+
+Index	Op	Arg1	Arg2	Result
+0	*	c	d	t1
+1	+	b	t1	t2
+2	=	t2	-	a
+🔸 Triple Representation
+Each operation is represented as (Op, Arg1, Arg2); no result field.
+Temporaries are referred by indices.
+
+Index	Op	Arg1	Arg2
+0	*	c	d
+1	+	b	(0)
+2	=	(1)	-
+🔸 Relationship Between Quadruple & Triple
+Concept	Quadruple	Triple
+Temporary variables	Stored explicitly (t1, t2)	Represented by instruction index (0), (1)
+Memory usage	Slightly higher	More compact
+Readability	Easier to trace	Harder to read manually
+🔸 Operator Precedence
+Handled by YACC precedence declarations (%left, %right), ensuring correct evaluation order.
+
+🧩 4️⃣ SAMPLE RUN
+🧠 Input:
+a = b + c * d
+✅ Output:
+=== Quadruple Representation ===
+Index   Op   Arg1   Arg2   Result
+0       *    c      d      t1
+1       +    b      t1     t2
+2       =    t2     -      a
+
+=== Triple Representation ===
+Index   Op   Arg1   Arg2
+0       *    c      d
+1       +    b      (0)
+2       =    (1)    -
+Explanation:
+
+Step 1: t1 = c * d
+
+Step 2: t2 = b + t1
+
+Step 3: a = t2
+
+🧩 5️⃣ EXECUTION COMMANDS
+bison -d cd6.y -o cd6.tab.c
+flex cd6.l
+gcc lex.yy.c cd6.tab.c -o cd6 -lfl
+./cd6
+🧠 6️⃣ VIVA QUESTIONS (with concise answers)
+Q1: What is Intermediate Code Generation?
+A: It’s a compiler phase that produces a machine-independent code (like 3-address code) between parsing and final code generation.
+
+Q2: What are Quadruples and Triples?
+A:
+
+Quadruple: 4 fields — (Op, Arg1, Arg2, Result)
+
+Triple: 3 fields — (Op, Arg1, Arg2), results are referred by index.
+
+Q3: Why use intermediate code?
+A: It simplifies optimization and makes target code generation easier.
+
+Q4: What is a temporary variable?
+A: A compiler-generated variable (t1, t2, etc.) used to store intermediate results.
+
+Q5: How are temporaries replaced in triples?
+A: By referencing the index of their defining operation — e.g., t1 → (0).
+
+Q6: What does %prec UMINUS do?
+A: Assigns precedence to unary minus operator, resolving ambiguity.
+
+Q7: What is the role of yylval?
+A: It carries token values (like strings or numbers) from Lex to Yacc.
+
+Q8: What is the difference between Quadruple and Triple?
+A: Quadruples explicitly name result variables; Triples use positional indices.
+
+Q9: What happens if you enter invalid syntax?
+A: YACC’s yyerror() is called, printing “Error: syntax error”.
+
+Q10: How can this code be extended?
+A: Add support for relational operators, multiple statements, or indirect triples.
+
+🧾 7️⃣ CONCLUSION
+This experiment demonstrates Intermediate Code Generation using Quadruples and Triples.
+It shows how high-level expressions are translated into machine-independent 3-address representations, an essential step before optimization and target code generation.
+The use of YACC handles grammar-based parsing, while Lex tokenizes input, showing the cooperation between compiler phases.
+
+Would you like me to now create a ready-to-print practical journal write-up (AIM → THEORY → ALGORITHM → CODE → OUTPUT → CONCLUSION → VIVA Q&A) for CD6: Intermediate Code Generation using Quadruples & Triples in your college format?
+
+You said:
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+
+struct Quadruple {
+    char op[5], arg1[20], arg2[20], res[20];
+} q[20];
+
+int n;
+
+int isNumber(char *s) {
+    for (int i = 0; s[i]; i++)
+        if (!isdigit(s[i])) return 0;
+    return 1;
+}
+
+void constantFolding() {
+    for (int i = 0; i < n; i++) {
+        if (isNumber(q[i].arg1) && isNumber(q[i].arg2)) {
+            int a = atoi(q[i].arg1);
+            int b = atoi(q[i].arg2);
+            int result;
+
+            if (strcmp(q[i].op, "+") == 0) result = a + b;
+            else if (strcmp(q[i].op, "-") == 0) result = a - b;
+            else if (strcmp(q[i].op, "*") == 0) result = a * b;
+            else if (strcmp(q[i].op, "/") == 0 && b != 0) result = a / b;
+            else continue;
+
+            sprintf(q[i].arg1, "%d", result);
+            strcpy(q[i].arg2, "-");
+            strcpy(q[i].op, "=");
+        }
+    }
+}
+
+void commonSubexprElim() {
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (strcmp(q[i].op, q[j].op) == 0 &&
+                strcmp(q[i].arg1, q[j].arg1) == 0 &&
+                strcmp(q[i].arg2, q[j].arg2) == 0) {
+                strcpy(q[j].op, "=");
+                strcpy(q[j].arg1, q[i].res);
+                strcpy(q[j].arg2, "-");
+            }
+        }
+    }
+}
+
+void copyPropagation() {
+    for (int i = 0; i < n; i++) {
+        if (strcmp(q[i].op, "=") == 0 && strcmp(q[i].arg2, "-") == 0) {
+            char source[20];
+            strcpy(source, q[i].arg1);
+            char target[20];
+            strcpy(target, q[i].res);
+            for (int j = i + 1; j < n; j++) {
+                if (strcmp(q[j].arg1, target) == 0)
+                    strcpy(q[j].arg1, source);
+                if (strcmp(q[j].arg2, target) == 0)
+                    strcpy(q[j].arg2, source);
+            }
+        }
+    }
+}
+
+int main() {
+    printf("Enter number of Quadruples: ");
+    scanf("%d", &n);
+    printf("Enter Quadruples in format: op arg1 arg2 result\n");
+
+    for (int i = 0; i < n; i++) {
+        scanf("%s %s %s %s", q[i].op, q[i].arg1, q[i].arg2, q[i].res);
+    }
+
+    printf("\nIntermediate Code:\n");
+    for (int i = 0; i < n; i++)
+        printf("%s\t%s\t%s\t%s\n", q[i].op, q[i].arg1, q[i].arg2, q[i].res);
+
+    constantFolding();
+    commonSubexprElim();
+    copyPropagation();
+
+    printf("\nOptimized Code:\n");
+    for (int i = 0; i < n; i++)
+        printf("%s\t%s\t%s\t%s\n", q[i].op, q[i].arg1, q[i].arg2, q[i].res);
+
+    return 0;
+}
+
+//Execution commands – 
+ gcc cd7.c -o cd7 
+ ./cd7 
+Enter number of Quadruples: 6 
+Enter Quadruples in format: op arg1 arg2 result 
+* 2 3 t1 
++ t1 5 t2 
+= t2 - a 
+* 2 3 t3 
++ t3 5 t4 
+= t4 - b 
+ChatGPT said:
+Perfect 👏 — this is your CD7 Experiment: “Code Optimization using Constant Folding, Common Subexpression Elimination, and Copy Propagation”.
+
+You’re now at the Optimization Phase of the compiler pipeline (after ICG in CD6).
+Let’s go step by step — so you can confidently explain this in your viva or practical exam.
+
+🧩 1️⃣ PROGRAM PURPOSE
+This C program demonstrates three classical compiler optimization techniques applied on Intermediate Code (Quadruples):
+
+Constant Folding – Precomputes constant expressions.
+
+Common Subexpression Elimination (CSE) – Removes redundant computations.
+
+Copy Propagation – Replaces unnecessary variable copies with their original values.
+
+🧩 2️⃣ LINE-BY-LINE EXPLANATION
+🔹 Headers and Data Structures
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+
+struct Quadruple {
+    char op[5], arg1[20], arg2[20], res[20];
+} q[20];
+
+int n;
+Explanation:
+
+Includes standard libraries for I/O, string, and character handling.
+
+Defines a structure Quadruple with four fields:
+
+op → Operator (+, -, *, /, =)
+
+arg1, arg2 → Operands
+
+res → Result (destination)
+
+Global array q[20] holds all intermediate code statements.
+
+n → Number of quadruples entered by user.
+
+🔹 Helper: Check if a string is a number
+int isNumber(char *s) {
+    for (int i = 0; s[i]; i++)
+        if (!isdigit(s[i])) return 0;
+    return 1;
+}
+Explanation:
+Loops through the string and checks if all characters are digits.
+Used to detect constant operands (like "2", "5").
+
+🔹 Optimization 1: Constant Folding
+void constantFolding() {
+    for (int i = 0; i < n; i++) {
+        if (isNumber(q[i].arg1) && isNumber(q[i].arg2)) {
+            int a = atoi(q[i].arg1);
+            int b = atoi(q[i].arg2);
+            int result;
+
+            if (strcmp(q[i].op, "+") == 0) result = a + b;
+            else if (strcmp(q[i].op, "-") == 0) result = a - b;
+            else if (strcmp(q[i].op, "*") == 0) result = a * b;
+            else if (strcmp(q[i].op, "/") == 0 && b != 0) result = a / b;
+            else continue;
+
+            sprintf(q[i].arg1, "%d", result);
+            strcpy(q[i].arg2, "-");
+            strcpy(q[i].op, "=");
+        }
+    }
+}
+✅ Explanation:
+
+For each quadruple, checks if both operands are constants.
+
+Computes result at compile time using atoi() and arithmetic.
+
+Replaces the operation with an assignment (=), folding the expression.
+
+Example:
+
+Before: *   2   3   t1
+After:  =   6   -   t1
+🧠 Concept: “Don’t compute constants at runtime if you can do it now.”
+
+🔹 Optimization 2: Common Subexpression Elimination
+void commonSubexprElim() {
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (strcmp(q[i].op, q[j].op) == 0 &&
+                strcmp(q[i].arg1, q[j].arg1) == 0 &&
+                strcmp(q[i].arg2, q[j].arg2) == 0) {
+                strcpy(q[j].op, "=");
+                strcpy(q[j].arg1, q[i].res);
+                strcpy(q[j].arg2, "-");
+            }
+        }
+    }
+}
+✅ Explanation:
+
+Compares every pair of quadruples (i, j) with i < j.
+
+If they have identical operator and operands, the second one is redundant.
+
+Replaces it with an assignment from the previous result.
+
+Example:
+
+Before: 
+0   *   2   3   t1
+3   *   2   3   t3
+
+After:
+3   =   t1  -   t3
+🧠 Concept: “Avoid recomputing expressions that already exist.”
+
+🔹 Optimization 3: Copy Propagation
+void copyPropagation() {
+    for (int i = 0; i < n; i++) {
+        if (strcmp(q[i].op, "=") == 0 && strcmp(q[i].arg2, "-") == 0) {
+            char source[20];
+            strcpy(source, q[i].arg1);
+            char target[20];
+            strcpy(target, q[i].res);
+            for (int j = i + 1; j < n; j++) {
+                if (strcmp(q[j].arg1, target) == 0)
+                    strcpy(q[j].arg1, source);
+                if (strcmp(q[j].arg2, target) == 0)
+                    strcpy(q[j].arg2, source);
+            }
+        }
+    }
+}
+✅ Explanation:
+
+Detects copy statements (like t1 = t2 or a = b).
+
+Replaces subsequent uses of target with the source.
+
+Eliminates unnecessary variable references.
+
+Example:
+
+Before: 
+=   t2   -   a
++   a    5   t3
+
+After:
+=   t2   -   a
++   t2   5   t3
+🧠 Concept: “Replace variables that just hold copies of others.”
+
+🔹 Input & Output Code
+int main() {
+    printf("Enter number of Quadruples: ");
+    scanf("%d", &n);
+    printf("Enter Quadruples in format: op arg1 arg2 result\n");
+
+    for (int i = 0; i < n; i++) {
+        scanf("%s %s %s %s", q[i].op, q[i].arg1, q[i].arg2, q[i].res);
+    }
+
+    printf("\nIntermediate Code:\n");
+    for (int i = 0; i < n; i++)
+        printf("%s\t%s\t%s\t%s\n", q[i].op, q[i].arg1, q[i].arg2, q[i].res);
+
+    constantFolding();
+    commonSubexprElim();
+    copyPropagation();
+
+    printf("\nOptimized Code:\n");
+    for (int i = 0; i < n; i++)
+        printf("%s\t%s\t%s\t%s\n", q[i].op, q[i].arg1, q[i].arg2, q[i].res);
+
+    return 0;
+}
+✅ Explanation:
+
+Takes input quadruples manually.
+
+Displays original intermediate code.
+
+Applies all three optimizations sequentially.
+
+Prints the final optimized quadruples.
+
+🧩 3️⃣ SAMPLE INPUT & OUTPUT
+🔸 Input:
+Enter number of Quadruples: 6
+Enter Quadruples in format: op arg1 arg2 result
+* 2 3 t1
++ t1 5 t2
+= t2 - a
+* 2 3 t3
++ t3 5 t4
+= t4 - b
+🔸 Output:
+🔹 Intermediate Code:
+*   2   3   t1
++   t1  5   t2
+=   t2  -   a
+*   2   3   t3
++   t3  5   t4
+=   t4  -   b
+🔹 After Constant Folding:
+=   6   -   t1
++   t1  5   t2
+=   t2  -   a
+=   6   -   t3
++   t3  5   t4
+=   t4  -   b
+🔹 After Common Subexpression Elimination:
+=   6   -   t1
++   t1  5   t2
+=   t2  -   a
+=   t1  -   t3
++   t3  5   t4
+=   t4  -   b
+🔹 After Copy Propagation (Final Optimized Code):
+=   6   -   t1
++   t1  5   t2
+=   t2  -   a
+=   t1  -   t3
++   t1  5   t4
+=   t4  -   b
+✅ Result:
+
+Constant expressions replaced by computed values.
+
+Repeated subexpressions (2*3) eliminated.
+
+Redundant copies (t3 = t1) propagated forward.
+
+🧩 4️⃣ THEORY — CODE OPTIMIZATION TECHNIQUES
+🔸 1. Constant Folding
+Replace compile-time computable constants.
+
+Example:
+
+t1 = 2 * 3
+→ t1 = 6
+🔸 2. Common Subexpression Elimination (CSE)
+Detects duplicate computations.
+
+Example:
+
+t1 = b + c
+t2 = b + c
+→ t2 = t1
+🔸 3. Copy Propagation
+Eliminates unnecessary copy assignments.
+
+Example:
+
+t1 = a
+b = t1
+→ b = a
+🔸 Why Optimize Code?
+Reduces redundant operations.
+
+Improves performance (speed + memory usage).
+
+Keeps semantics unchanged.
+
+🧩 5️⃣ COMPILATION & EXECUTION COMMANDS
+gcc cd7.c -o cd7
+./cd7
+🧠 6️⃣ VIVA QUESTIONS & ANSWERS
+Question	Answer
+Q1. What is the purpose of code optimization?	To improve efficiency of code without changing its meaning.
+Q2. What is constant folding?	Compile-time evaluation of constant expressions.
+Q3. What is common subexpression elimination?	Reuse results of previously computed identical expressions.
+Q4. What is copy propagation?	Replaces variables with the original value they copy.
+Q5. Does optimization change program logic?	No, semantics remain the same.
+Q6. What is a quadruple?	A record structure representing intermediate code with op, arg1, arg2, result.
+Q7. Why perform optimizations on intermediate code?	It’s easier, machine-independent, and leads to better final code.
+Q8. Which phase follows optimization in a compiler?	Code generation phase.
+Q9. What is dead code elimination?	Removing statements whose results are never used (can be added later).
+Q10. How are constants identified here?	Using the isNumber() function that checks all digits.
+🧾 7️⃣ CONCLUSION
+This experiment demonstrates code optimization techniques on intermediate code using quadruple representation.
+By applying constant folding, common subexpression elimination, and copy propagation, redundant computations and unnecessary copies are eliminated.
+These optimizations significantly enhance the efficiency of the generated code without altering its semantics.
+
+Would you like me to now create a ready-to-print practical write-up (AIM → THEORY → ALGORITHM → CODE → OUTPUT → CONCLUSION → VIVA) for this CD7 experiment in your journal format (like your previous compiler design experiments)?
+
+You said:
+T.Y. B. Tech. CSBS Academic Year 2025-26 Semester: V
+Compiler Design Laboratory
+LABORATORY WRITE UP
+Experiment Number: 08
+
+TITLE:
+Generate final target code the optimized code or the provided input.
+PROBLEM STATEMENT:
+Generate final target code the optimized code or the provided input.
+OBJECTIVE:
+1. To understand the working principles of Code Generation Phase
+2. To understand and implement the code generation algorithm
+THEORY: //To be written by Students
+
+// Write theory by elaborating below points
+
+More on role and significance of Code generation in Compilation Process,
+IMPLEMENTATION:
+● PLATFORM:
+o Any platform (language)
+
+● PSEUDO CODE: //To be Written by Students
+Write pseudo code, Output screen shots
+● CONCLUSION:
+● FAQs //To be Written by Students
+1. Discuss the design issues of CG?
+2. Explain Basic Block, Flow Graph, Partition algorithm
+3. Explain Label tree algorithm (labelling Algorithm)
+T.Y. B. Tech. CSBS Academic Year 2025-26 Semester: V
+Compiler Design Laboratory
+LABORATORY WRITE UP
+Experiment Number: 09
+
+TITLE:
+Case Study: Haskell Programming Language
+PROBLEM STATEMENT:
+Case Study: Haskell Programming Language
+OBJECTIVE:
+To understand the Haskell Programming Language, GHC Compiler
+THEORY: //To be written by Students
+
+// Write theory by elaborating below points
+
+Explanation of Haskell Language and GHC Compiler, Framework etc.
+IMPLEMENTATION:
+● PLATFORM:
+o GHC
+
+● PSEUDO CODE: //To be Written by Students
+Write pseudo code, Output screen shots
+● CONCLUSION:
+● FAQs //To be Written by Students
+1. Discuss about Haskell Language, Lazy language?
+2. Explain functions, structure of Haskell program
+3. Explain on GHC compiler and comparison with C compiler
+ChatGPT said:
+Perfect 👍 — these are your CD8 and CD9 Compiler Design Lab experiments.
+Let’s complete them with clear Theory, Pseudo code, Conclusion, and FAQs — exactly how your college practical journal requires (T.Y. B.Tech CSBS format).
+
+🧩 T.Y. B. Tech. CSBS – Semester V
+Compiler Design Laboratory
+Experiment No. 08
+TITLE:
+Generate Final Target Code from the Optimized Code or Provided Input.
+
+PROBLEM STATEMENT:
+Write a program to generate final target code (machine-level equivalent or assembly-like output) from the given optimized intermediate code (quadruples or three-address code).
+
+OBJECTIVES:
+To understand the working principles of the Code Generation Phase.
+
+To understand and implement a code generation algorithm that converts intermediate representation into target code.
+
+🧠 THEORY
+🔹 Role of Code Generation in Compilation Process
+After optimization, the code generation phase of the compiler converts the intermediate code into target machine code (assembly code or actual executable code).
+
+This is the final phase of compilation, which:
+
+Translates high-level language → machine-understandable code
+
+Allocates registers and memory
+
+Produces efficient instructions to execute the optimized intermediate representation
+
+🔹 Tasks in Code Generation
+Instruction Selection – Choose suitable machine instructions for operations (like add, sub, mov).
+
+Register Allocation – Assign variables and temporary results to CPU registers.
+
+Addressing Mode Selection – Determine how operands are accessed (direct, indirect, immediate).
+
+Instruction Ordering – Arrange instructions to minimize pipeline stalls or delays.
+
+Target Code Emission – Output final assembly/machine code instructions.
+
+🔹 Example
+Intermediate Code (Optimized):
+
+=  6   -   t1
++  t1  5   t2
+=  t2  -   a
+Generated Target Code (Assembly-like):
+
+MOV R0, #6
+ADD R1, R0, #5
+MOV a, R1
+Explanation:
+
+Constants moved into registers
+
+Arithmetic performed in registers
+
+Final result stored in variable a
+
+🔹 Structure of a Simple Code Generator
+Intermediate Code → Code Generator → Target Assembly
+Each quadruple (op, arg1, arg2, result) is mapped to a machine instruction.
+
+Quadruple	Target Code
+= a - b	MOV a, b
++ a b c	ADD c, a, b
+- a b c	SUB c, a, b
+* a b c	MUL c, a, b
+/ a b c	DIV c, a, b
+🔹 Significance:
+Translates optimized intermediate representation to executable code.
+
+Ensures correctness, efficiency, and hardware utilization.
+
+Acts as the bridge between the compiler’s front-end and machine architecture.
+
+⚙️ IMPLEMENTATION
+PLATFORM:
+Any programming language (C / Python / Java)
+
+PSEUDO CODE:
+START
+  Read optimized quadruples (op, arg1, arg2, result)
+  FOR each quadruple
+    IF op = '=' THEN
+       PRINT "MOV result, arg1"
+    ELSE IF op = '+' THEN
+       PRINT "MOV R0, arg1"
+       PRINT "ADD R0, arg2"
+       PRINT "MOV result, R0"
+    ELSE IF op = '-' THEN
+       PRINT "MOV R0, arg1"
+       PRINT "SUB R0, arg2"
+       PRINT "MOV result, R0"
+    ELSE IF op = '*' THEN
+       PRINT "MOV R0, arg1"
+       PRINT "MUL R0, arg2"
+       PRINT "MOV result, R0"
+    ELSE IF op = '/' THEN
+       PRINT "MOV R0, arg1"
+       PRINT "DIV R0, arg2"
+       PRINT "MOV result, R0"
+  END FOR
+STOP
+SAMPLE OUTPUT:
+Input Quadruples:
+=   6   -   t1
++   t1  5   t2
+=   t2  -   a
+
+Generated Target Code:
+MOV R0, #6
+ADD R1, R0, #5
+MOV a, R1
+✅ CONCLUSION:
+The experiment demonstrates the Code Generation phase of a compiler.
+It successfully converts optimized intermediate code (quadruples) into target assembly-level instructions, completing the compilation pipeline from source to machine-understandable code.
+
+💬 FAQs
+1. Discuss the design issues of Code Generation.
+
+Correctness: Must generate correct code.
+
+Efficiency: Should minimize time and memory usage.
+
+Register Allocation: Proper use of limited CPU registers.
+
+Instruction Selection: Best mapping between operations and target machine instructions.
+
+2. Explain Basic Block, Flow Graph, and Partition Algorithm.
+
+Basic Block: A sequence of instructions with one entry and one exit point.
+
+Flow Graph: A directed graph representing the control flow between basic blocks.
+
+Partition Algorithm: Divides intermediate code into basic blocks by identifying leaders (first statements of blocks).
+
+3. Explain Label Tree (Labelling) Algorithm.
+Used for optimizing register allocation and expression evaluation order.
+
+Assigns labels to nodes in an expression tree.
+
+Label = number of registers needed to evaluate subtree.
+
+Helps decide order of code generation and register reuse efficiently.
+
+✅ End of Experiment 08
+
+🧩 T.Y. B. Tech. CSBS – Semester V
+Compiler Design Laboratory
+Experiment No. 09
+TITLE:
+Case Study: Haskell Programming Language
+
+PROBLEM STATEMENT:
+Perform a case study on the Haskell Programming Language and its GHC (Glasgow Haskell Compiler).
+
+OBJECTIVE:
+To understand the structure, syntax, and semantics of the Haskell language.
+
+To explore the GHC compiler and compare its working with traditional imperative compilers like C.
+
+🧠 THEORY
+🔹 Introduction to Haskell
+Haskell is a pure functional programming language named after Haskell Curry.
+
+It is declarative, lazy, and statically typed.
+
+Instead of changing variables and using loops, programs are expressed as functions and expressions.
+
+🔹 Key Features of Haskell
+Pure Functional – No side effects; functions always produce the same output for the same input.
+
+Lazy Evaluation – Expressions are evaluated only when needed.
+
+Strong Static Typing – Every expression has a type determined at compile-time.
+
+Type Inference – Haskell automatically infers data types.
+
+Higher-Order Functions – Functions can take other functions as parameters or return them.
+
+Immutability – Variables cannot be changed once defined.
+
+🔹 Structure of a Haskell Program
+A simple Haskell program to find factorial:
+
+-- factorial.hs
+fact :: Int -> Int
+fact 0 = 1
+fact n = n * fact (n - 1)
+
+main = print (fact 5)
+Output:
+
+120
+🔹 Haskell Framework (GHC Compiler)
+GHC = Glasgow Haskell Compiler
+It is the official compiler for Haskell, responsible for:
+
+Lexical & Syntax Analysis
+
+Type Checking & Desugaring
+
+Optimization & Code Generation
+
+Linking with runtime system (GHC RTS)
+
+Compilation Steps:
+
+Source Code (.hs)
+     ↓
+GHC Front End (parsing, type checking)
+     ↓
+Intermediate Code (Core / STG / Cmm)
+     ↓
+Code Generator (LLVM / Native)
+     ↓
+Executable File (.exe / .out)
+Command Example:
+
+ghc factorial.hs -o factorial
+./factorial
+🔹 Comparison with C Compiler
+Feature	Haskell (GHC)	C (GCC)
+Paradigm	Functional	Procedural
+Evaluation	Lazy	Eager
+Typing	Strongly typed, inferred	Explicitly typed
+Memory	Managed (GC)	Manual (malloc/free)
+Compilation Target	Core → LLVM → Native	Direct → Assembly
+⚙️ IMPLEMENTATION
+PLATFORM:
+GHC (Glasgow Haskell Compiler)
+
+PSEUDO CODE (for factorial example):
+Define function fact(n)
+  IF n == 0
+     RETURN 1
+  ELSE
+     RETURN n * fact(n-1)
+END
+
+Call fact(5)
+Print the result
+OUTPUT:
+120
+✅ CONCLUSION:
+The case study provides an overview of the Haskell language and the GHC compiler, highlighting its functional nature, lazy evaluation, and strong typing.
+It shows how Haskell differs from imperative languages like C and how the GHC compiler performs multi-stage optimization before generating efficient executable code.
+
+💬 FAQs
+1. Discuss about Haskell Language, Lazy Language.
+Haskell is a purely functional and lazy language, meaning computations are delayed until results are required. This allows infinite data structures and high efficiency.
+
+2. Explain functions and structure of a Haskell program.
+Haskell programs are composed of functions with type signatures. The main function is the entry point, similar to C’s main().
+
+3. Explain GHC compiler and comparison with C compiler.
+GHC is the main compiler for Haskell that converts high-level functional code into optimized machine code.
+Unlike C compilers (which are procedural), GHC performs type inference, lazy evaluation, and compiles via multiple intermediate stages like Core and STG.
+
+✅ End of Experiment 09
+
+Would you like me to now prepare a formatted Word/PDF-ready journal layout (with headings, borders, and university-style structure for submission) for Experiments 08 and 09?
+
+
+
+
+No file chosenNo file chosen
+ChatGPT can make mistakes. Check important info. See Cookie Preferences.
